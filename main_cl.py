@@ -372,7 +372,7 @@ def run(args, verbose=False):
     #----- EVALUATION of GENERATOR -----#
     #-----------------------------------#
 
-    if (utils.checkattr(args, 'feedback') or train_gen) and args.experiment=="CIFAR100" and args.scenario=="class":
+    if (utils.checkattr(args, 'feedback') or train_gen) and args.experiment in ["CIFAR100", 'fruits360'] and args.scenario=="class":
 
         # Dataset and model to be used
         test_set = ConcatDataset(test_datasets)
@@ -535,7 +535,7 @@ def run(args, verbose=False):
                                   pdf=pp, title="Generated samples (by final model)")
 
         # -plot "Precision & Recall"-curve
-        if gen_eval and args.experiment=="CIFAR100" and args.scenario=="class" and FileFound:
+        if gen_eval and args.experiment in ["CIFAR100", 'fruits360'] and args.scenario=="class" and FileFound:
             figure = evaluate.visual.plt.plot_pr_curves([[precision]], [[recall]])
             pp.savefig(figure)
 

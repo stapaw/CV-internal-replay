@@ -76,11 +76,11 @@ def add_task_options(parser, only_MNIST=False, single_task=False, compare_code="
     # expirimental task parameters
     task_params = parser.add_argument_group('Task Parameters')
     if single_task:
-        task_choices = ['CIFAR10', 'CIFAR100', 'MNIST', 'MNIST28']
+        task_choices = ['CIFAR10', 'CIFAR100', 'MNIST', 'MNIST28', 'fruits360', 'fmnist']
         task_default = 'CIFAR10'
     else:
-        MNIST_tasks = ['splitMNIST', 'permMNIST']
-        image_tasks = ['CIFAR100']
+        MNIST_tasks = ['splitMNIST', 'permMNIST','fmnist']
+        image_tasks = ['CIFAR100',  'fruits360']
         task_choices = MNIST_tasks if only_MNIST else MNIST_tasks+image_tasks
         task_default = 'splitMNIST' if only_MNIST else 'CIFAR100'
     task_params.add_argument('--experiment', type=str, default=task_default, choices=task_choices)
@@ -94,7 +94,7 @@ def add_task_options(parser, only_MNIST=False, single_task=False, compare_code="
         task_params.add_argument('--augment', action='store_true',
                                  help="augment training data (random crop & horizontal flip)")
         task_params.add_argument('--no-norm', action='store_false', dest='normalize',
-                                 help="don't normalize images (only for CIFAR)")
+                                 help="don't normalize images (only for CIFAR, 'fruits360')")
     if not single_task and compare_code=="none":
         task_params.add_argument('--only-last', action='store_true', help="only train on last task / episode")
     return parser
@@ -281,27 +281,27 @@ def set_defaults(args, only_MNIST=False, single_task=False, generative=True, com
         args.freeze_convE = True #--> internal replay
         args.distill = True      #--> distillation
     # -set default-values for certain arguments based on chosen experiment
-    args.normalize = args.normalize if args.experiment in ('CIFAR10', 'CIFAR100') else False
+    args.normalize = args.normalize if args.experiment in ('CIFAR10', 'CIFAR100', 'fruits360') else False
     args.augment = args.augment if args.experiment in ('CIFAR10', 'CIFAR100') else False
     if hasattr(args, "depth"):
-        args.depth = (5 if args.experiment in ('CIFAR10', 'CIFAR100') else 0) if args.depth is None else args.depth
+        args.depth = (5 if args.experiment in ('CIFAR10', 'CIFAR100', 'fruits360') else 0) if args.depth is None else args.depth
     if hasattr(args, "recon_loss"):
         args.recon_loss = (
-            "MSE" if args.experiment in ('CIFAR10', 'CIFAR100') else "BCE"
+            "MSE" if args.experiment in ('CIFAR10', 'CIFAR100', 'fruits360') else "BCE"
         ) if args.recon_loss is None else args.recon_loss
     if hasattr(args, "dg_type"):
         args.dg_type = ("task" if args.experiment=='permMNIST' else "class") if args.dg_type is None else args.dg_type
     if not single_task:
         args.tasks= (
-            5 if args.experiment=='splitMNIST' else (10 if args.experiment=="CIFAR100" else 100)
+            5 if args.experiment=='splitMNIST' else (10 if args.experiment in ("CIFAR100", 'fruits360') else 100)
         ) if args.tasks is None else args.tasks
-        args.iters = (5000 if args.experiment=='CIFAR100' else 2000) if args.iters is None else args.iters
+        args.iters = (5000 if args.experiment in ('CIFAR100', 'fruits360') else 2000) if args.iters is None else args.iters
         args.lr = (0.001 if args.experiment=='splitMNIST' else 0.0001) if args.lr is None else args.lr
         args.batch = (128 if args.experiment=='splitMNIST' else 256) if args.batch is None else args.batch
         args.fc_units = (400 if args.experiment=='splitMNIST' else 2000) if args.fc_units is None else args.fc_units
     # -set hyper-parameter values (typically found by grid-search) based on chosen experiment & scenario
     if not single_task and not compare_code in ('hyper', 'bir'):
-        if args.experiment=='splitMNIST':
+        if args.experiment in ['splitMNIST', 'fmnist']:
             args.xdg_prop = 0.9 if args.scenario=="task" and args.xdg_prop is None else args.xdg_prop
             args.si_c = (10. if args.scenario=='task' else 0.1) if args.si_c is None else args.si_c
             args.ewc_lambda = (
@@ -310,7 +310,7 @@ def set_defaults(args, only_MNIST=False, single_task=False, generative=True, com
             args.gamma = 1. if args.gamma is None else args.gamma
             if hasattr(args, 'dg_prop'):
                 args.dg_prop = 0.8 if args.dg_prop is None else args.dg_prop
-        elif args.experiment=='CIFAR100':
+        elif args.experiment in ['CIFAR100', 'fruits360']:
             args.xdg_prop = 0.7 if args.scenario=="task" and args.xdg_prop is None else args.xdg_prop
             args.si_c = (100. if args.scenario=='task' else 1.) if args.si_c is None else args.si_c
             args.ewc_lambda = (1000. if args.scenario=='task' else 1.) if args.ewc_lambda is None else args.ewc_lambda
