@@ -5,7 +5,9 @@ from google_drive_downloader import GoogleDriveDownloader as gdd
 
 
 class fruits360(Dataset):
-    def __init__(self, root_dir, train=True, download=True, transform=None, target_transform=None):
+    def __init__(
+        self, root_dir, train=True, download=True, transform=None, target_transform=None
+    ):
         self.root_dir = root_dir
         if train:
             self.dir = os.path.join(self.root_dir, "train")
@@ -17,7 +19,8 @@ class fruits360(Dataset):
             self.download(path=self.root_dir)
 
         self.dataset = torchvision.datasets.ImageFolder(
-            root=self.dir, transform=transform)
+            root=self.dir, transform=transform
+        )
 
     def __len__(self):
         return len(self.dataset)
@@ -29,18 +32,17 @@ class fruits360(Dataset):
         return (img, target)
 
     def download(self, path):
-        '''
+        """
         Download dataset if not present
-        '''
+        """
         url = "https://drive.google.com/file/d/1h96fQdKVII3nWvvrrO5KXIZ8msZSJ6wa/view?usp=sharing"
         id = url.split("/")[5]
         zipName = "fruits360.zip"
         if not os.path.isdir(path):
             ogPath = os.path.split(path)[0]
-            gdd.download_file_from_google_drive(file_id=id,
-                                                dest_path=os.path.join(
-                                                    ogPath, zipName),
-                                                unzip=True)
+            gdd.download_file_from_google_drive(
+                file_id=id, dest_path=os.path.join(ogPath, zipName), unzip=True
+            )
             os.remove(os.path.join(ogPath, zipName))
             print("Downloaded")
         else:

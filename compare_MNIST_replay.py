@@ -10,10 +10,17 @@ import main_cl
 ## Function for specifying input-options and organizing / checking them
 def handle_inputs():
     # Set indicator-dictionary for correctly retrieving / checking input options
-    kwargs = {'single_task': False, 'only_MNIST': True, 'generative': True, 'compare_code': 'replay'}
+    kwargs = {
+        "single_task": False,
+        "only_MNIST": True,
+        "generative": True,
+        "compare_code": "replay",
+    }
     # Define input options
-    parser = options.define_args(filename="_compare_MNIST_replay",
-                                 description="Generative replay: effect of quantity & quality.")
+    parser = options.define_args(
+        filename="_compare_MNIST_replay",
+        description="Generative replay: effect of quantity & quality.",
+    )
     parser = options.add_general_options(parser, **kwargs)
     parser = options.add_eval_options(parser, **kwargs)
     parser = options.add_task_options(parser, **kwargs)
@@ -27,24 +34,22 @@ def handle_inputs():
     return args
 
 
-
 ## Parameter-values to compare
 batch_r_list = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 g_fc_uni_list = [10, 20, 40, 100, 200, 400, 1000]
-
 
 
 def get_result(args):
     # -get param-stamp
     param_stamp = get_param_stamp_from_args(args)
     # -check whether already run, and if not do so
-    if os.path.isfile('{}/acc-{}.txt'.format(args.r_dir, param_stamp)):
+    if os.path.isfile("{}/acc-{}.txt".format(args.r_dir, param_stamp)):
         print("{}: already run".format(param_stamp))
     else:
         print("{}: ...running...".format(param_stamp))
         main_cl.run(args)
     # -get average accuracy
-    fileName = '{}/acc-{}.txt'.format(args.r_dir, param_stamp)
+    fileName = "{}/acc-{}.txt".format(args.r_dir, param_stamp)
     file = open(fileName)
     ave = float(file.readline())
     file.close()
@@ -64,8 +69,7 @@ def collect_all(method_dict, seed_list, args, name=None):
     return method_dict
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     ## Load input-arguments & set default values
     args = handle_inputs()
@@ -82,14 +86,13 @@ if __name__ == '__main__':
     if not os.path.isdir(args.p_dir):
         os.mkdir(args.p_dir)
 
-    #-------------------------------------------------------------------------------------------------#
+    # -------------------------------------------------------------------------------------------------#
 
-    #--------------------------#
-    #----- RUN ALL MODELS -----#
-    #--------------------------#
+    # --------------------------#
+    # ----- RUN ALL MODELS -----#
+    # --------------------------#
 
-    seed_list = list(range(args.seed, args.seed+args.n_seeds))
-
+    seed_list = list(range(args.seed, args.seed + args.n_seeds))
 
     ###### GENERATIVE REPLAY VARIANTS #########
     args.replay = "generative"
@@ -99,8 +102,12 @@ if __name__ == '__main__':
     for batch_r in batch_r_list:
         args.batch_replay = batch_r
         GR_b[batch_r] = {}
-        GR_b[batch_r] = collect_all(GR_b[batch_r], seed_list, args,
-                                    name="GR - batch-size replay = {}".format(batch_r))
+        GR_b[batch_r] = collect_all(
+            GR_b[batch_r],
+            seed_list,
+            args,
+            name="GR - batch-size replay = {}".format(batch_r),
+        )
 
     ## GR+reinit with batch-size
     GR_br = {}
@@ -108,8 +115,12 @@ if __name__ == '__main__':
     for batch_r in batch_r_list:
         args.batch_replay = batch_r
         GR_br[batch_r] = {}
-        GR_br[batch_r] = collect_all(GR_br[batch_r], seed_list, args,
-                                     name="GR & reinit - batch-size replay = {}".format(batch_r))
+        GR_br[batch_r] = collect_all(
+            GR_br[batch_r],
+            seed_list,
+            args,
+            name="GR & reinit - batch-size replay = {}".format(batch_r),
+        )
     args.reinit = False
     args.batch_replay = None
 
@@ -119,8 +130,12 @@ if __name__ == '__main__':
         args.g_fc_uni = g_fc
         args.g_h_dim = g_fc
         GR_g[g_fc] = {}
-        GR_g[g_fc] = collect_all(GR_g[g_fc], seed_list, args,
-                                 name="GR - # units per hidden layer VAE = {}".format(g_fc))
+        GR_g[g_fc] = collect_all(
+            GR_g[g_fc],
+            seed_list,
+            args,
+            name="GR - # units per hidden layer VAE = {}".format(g_fc),
+        )
 
     ## GR+reinit with gen-size
     GR_gr = {}
@@ -129,11 +144,13 @@ if __name__ == '__main__':
         args.g_fc_uni = g_fc
         args.g_h_dim = g_fc
         GR_gr[g_fc] = {}
-        GR_gr[g_fc] = collect_all(GR_gr[g_fc], seed_list, args,
-                                  name="GR & reinit - # units per hidden layer VAE = {}".format(g_fc))
+        GR_gr[g_fc] = collect_all(
+            GR_gr[g_fc],
+            seed_list,
+            args,
+            name="GR & reinit - # units per hidden layer VAE = {}".format(g_fc),
+        )
     args.reinit = False
-
-
 
     ###### OTHER APPROACHES #########
 
@@ -170,22 +187,22 @@ if __name__ == '__main__':
     args.distill = False
 
     ## XdG
-    if args.scenario=="task":
+    if args.scenario == "task":
         args.xdg = True
         XDG = {}
         XDG = collect_all(XDG, seed_list, args, name="XdG")
         args.xdg = False
 
+    # -------------------------------------------------------------------------------------------------#
 
-
-    #-------------------------------------------------------------------------------------------------#
-
-    #--------------------#
-    #----- PLOTTING -----#
-    #--------------------#
+    # --------------------#
+    # ----- PLOTTING -----#
+    # --------------------#
 
     # name for plot
-    plot_name = "summaryReplay-{}{}-{}".format(args.experiment, args.tasks, args.scenario)
+    plot_name = "summaryReplay-{}{}-{}".format(
+        args.experiment, args.tasks, args.scenario
+    )
     scheme = "incremental {} learning".format(args.scenario)
     title = "{}  -  {}".format(args.experiment, scheme)
 
@@ -194,7 +211,7 @@ if __name__ == '__main__':
     figure_list = []
 
     # set scale of y-axis
-    y_lim = [0,1] if args.scenario=="class" else None
+    y_lim = [0, 1] if args.scenario == "class" else None
 
     # methods for comparison
     h_lines = [
@@ -202,22 +219,53 @@ if __name__ == '__main__':
         np.mean([EWC[seed] for seed in seed_list]),
         np.mean([SI[seed] for seed in seed_list]),
         np.mean([LWF[seed] for seed in seed_list]),
-        np.mean([(XDG[seed] if args.scenario=="task" else OFF[seed]) for seed in seed_list])
+        np.mean(
+            [
+                (XDG[seed] if args.scenario == "task" else OFF[seed])
+                for seed in seed_list
+            ]
+        ),
     ]
-    if args.scenario=="task":
+    if args.scenario == "task":
         h_lines.append(np.mean([OFF[seed] for seed in seed_list]))
-    h_errors = [
-        np.sqrt(np.var([BASE[seed] for seed in seed_list]) / (len(seed_list)-1)),
-        np.sqrt(np.var([EWC[seed] for seed in seed_list]) / (len(seed_list) - 1)),
-        np.sqrt(np.var([SI[seed] for seed in seed_list]) / (len(seed_list) - 1)),
-        np.sqrt(np.var([LWF[seed] for seed in seed_list]) / (len(seed_list) - 1)),
-        np.sqrt(np.var([(XDG[seed] if args.scenario=="task" else OFF[seed]) for seed in seed_list]) / (len(seed_list) - 1)),
-    ] if args.n_seeds>1 else None
-    if args.scenario=="task" and args.n_seeds>1:
-        h_errors.append(np.sqrt(np.var([OFF[seed] for seed in seed_list]) / (len(seed_list) - 1)))
-    h_labels = ["None", "EWC", "SI", "LwF", "XdG" if args.scenario=="task" else "Joint"]
-    h_colors = ["grey", "darkgreen", "yellowgreen", "goldenrod", "deepskyblue" if args.scenario=="task" else "black"]
-    if args.scenario=="task":
+    h_errors = (
+        [
+            np.sqrt(np.var([BASE[seed] for seed in seed_list]) / (len(seed_list) - 1)),
+            np.sqrt(np.var([EWC[seed] for seed in seed_list]) / (len(seed_list) - 1)),
+            np.sqrt(np.var([SI[seed] for seed in seed_list]) / (len(seed_list) - 1)),
+            np.sqrt(np.var([LWF[seed] for seed in seed_list]) / (len(seed_list) - 1)),
+            np.sqrt(
+                np.var(
+                    [
+                        (XDG[seed] if args.scenario == "task" else OFF[seed])
+                        for seed in seed_list
+                    ]
+                )
+                / (len(seed_list) - 1)
+            ),
+        ]
+        if args.n_seeds > 1
+        else None
+    )
+    if args.scenario == "task" and args.n_seeds > 1:
+        h_errors.append(
+            np.sqrt(np.var([OFF[seed] for seed in seed_list]) / (len(seed_list) - 1))
+        )
+    h_labels = [
+        "None",
+        "EWC",
+        "SI",
+        "LwF",
+        "XdG" if args.scenario == "task" else "Joint",
+    ]
+    h_colors = [
+        "grey",
+        "darkgreen",
+        "yellowgreen",
+        "goldenrod",
+        "deepskyblue" if args.scenario == "task" else "black",
+    ]
+    if args.scenario == "task":
         h_labels.append("Joint")
         h_colors.append("black")
 
@@ -242,15 +290,25 @@ if __name__ == '__main__':
             sem_GRr.append(np.sqrt(np.var(all_entries) / (len(all_entries) - 1)))
 
     averages = [ave_GR, ave_GRr]
-    if args.n_seeds>1:
+    if args.n_seeds > 1:
         sems = [sem_GR, sem_GRr]
 
     figure = plt.plot_lines_with_baselines(
         averages,
-        x_axes=batch_r_list, ylabel="Test accuracy (after all tasks)", title=title, x_log=True, ylim=y_lim,
-        line_names=line_names, xlabel="Replay batch-size (log-scale)", with_dots=True,
+        x_axes=batch_r_list,
+        ylabel="Test accuracy (after all tasks)",
+        title=title,
+        x_log=True,
+        ylim=y_lim,
+        line_names=line_names,
+        xlabel="Replay batch-size (log-scale)",
+        with_dots=True,
         list_with_errors=sems if args.n_seeds > 1 else None,
-        h_lines=h_lines, h_errors=h_errors, h_labels=h_labels, h_colors=h_colors, colors=colors
+        h_lines=h_lines,
+        h_errors=h_errors,
+        h_labels=h_labels,
+        h_colors=h_colors,
+        colors=colors,
     )
     figure_list.append(figure)
 
@@ -271,15 +329,25 @@ if __name__ == '__main__':
             sem_GRr.append(np.sqrt(np.var(all_entries) / (len(all_entries) - 1)))
 
     averages = [ave_GR, ave_GRr]
-    if args.n_seeds>1:
+    if args.n_seeds > 1:
         sems = [sem_GR, sem_GRr]
 
     figure = plt.plot_lines_with_baselines(
         averages,
-        x_axes=g_fc_uni_list, ylabel="Test accuracy (after all tasks)", title=title, x_log=True, ylim=y_lim,
-        line_names=line_names, xlabel="# of units in hidden layers VAE (log-scale)", with_dots=True,
+        x_axes=g_fc_uni_list,
+        ylabel="Test accuracy (after all tasks)",
+        title=title,
+        x_log=True,
+        ylim=y_lim,
+        line_names=line_names,
+        xlabel="# of units in hidden layers VAE (log-scale)",
+        with_dots=True,
         list_with_errors=sems if args.n_seeds > 1 else None,
-        h_lines=h_lines, h_errors=h_errors, h_labels=h_labels, h_colors=h_colors, colors=colors
+        h_lines=h_lines,
+        h_errors=h_errors,
+        h_labels=h_labels,
+        h_colors=h_colors,
+        colors=colors,
     )
     figure_list.append(figure)
 

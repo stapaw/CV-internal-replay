@@ -11,10 +11,17 @@ import main_cl
 ## Function for specifying input-options and organizing / checking them
 def handle_inputs():
     # Set indicator-dictionary for correctly retrieving / checking input options
-    kwargs = {'single_task': False, 'only_MNIST': True, 'generative': True, 'compare_code': 'bir'}
+    kwargs = {
+        "single_task": False,
+        "only_MNIST": True,
+        "generative": True,
+        "compare_code": "bir",
+    }
     # Define input options
-    parser = options.define_args(filename="_compare_CIFAR100_bir",
-                                 description='Compare different components of BI-R on permuted MNIST.')
+    parser = options.define_args(
+        filename="_compare_CIFAR100_bir",
+        description="Compare different components of BI-R on permuted MNIST.",
+    )
     parser = options.add_general_options(parser, **kwargs)
     parser = options.add_eval_options(parser, **kwargs)
     parser = options.add_permutedMNIST_task_options(parser, **kwargs)
@@ -41,7 +48,7 @@ def get_results(args):
         print("{}: ...running...".format(param_stamp))
         main_cl.run(args)
     # -get average accuracies
-    fileName = '{}/acc-{}.txt'.format(args.r_dir, param_stamp)
+    fileName = "{}/acc-{}.txt".format(args.r_dir, param_stamp)
     file = open(fileName)
     ave = float(file.readline())
     file.close()
@@ -61,59 +68,116 @@ def collect_all(method_dict, seed_list, args, name=None):
     return method_dict
 
 
-def barplots(result_list1, result_list2, names1, names2, ids, colors, seed_list, only_last_dir, chance_level=None,
-             long_names1=None, long_names2=None, ylabel=None, title=None, ylim=None, perc=False, neg=False):
+def barplots(
+    result_list1,
+    result_list2,
+    names1,
+    names2,
+    ids,
+    colors,
+    seed_list,
+    only_last_dir,
+    chance_level=None,
+    long_names1=None,
+    long_names2=None,
+    ylabel=None,
+    title=None,
+    ylim=None,
+    perc=False,
+    neg=False,
+):
 
     # should results be multiplied by 100 and/or -1?
     multi = 100 if perc else 1
     multi = -multi if neg else multi
 
     # collect results
-    dots1 = [[multi*result_list1[seed][id] for seed in seed_list] for id in ids]
-    means1 = [np.mean([multi*result_list1[seed][id] for seed in seed_list]) for id in ids]
-    if len(seed_list)>1:
-        sems1 = [np.sqrt(np.var([multi*result_list1[seed][id] for seed in seed_list])/(len(seed_list)-1)) for id in ids]
+    dots1 = [[multi * result_list1[seed][id] for seed in seed_list] for id in ids]
+    means1 = [
+        np.mean([multi * result_list1[seed][id] for seed in seed_list]) for id in ids
+    ]
+    if len(seed_list) > 1:
+        sems1 = [
+            np.sqrt(
+                np.var([multi * result_list1[seed][id] for seed in seed_list])
+                / (len(seed_list) - 1)
+            )
+            for id in ids
+        ]
     dots2 = [[multi * result_list2[seed][id] for seed in seed_list] for id in ids]
-    means2 = [np.mean([multi*result_list2[seed][id] for seed in seed_list]) for id in ids]
-    if len(seed_list)>1:
-        sems2 = [np.sqrt(np.var([multi*result_list2[seed][id] for seed in seed_list])/(len(seed_list)-1)) for id in ids]
+    means2 = [
+        np.mean([multi * result_list2[seed][id] for seed in seed_list]) for id in ids
+    ]
+    if len(seed_list) > 1:
+        sems2 = [
+            np.sqrt(
+                np.var([multi * result_list2[seed][id] for seed in seed_list])
+                / (len(seed_list) - 1)
+            )
+            for id in ids
+        ]
 
     # performance of base network only trained on last task
-    h_lines = [np.mean([multi*only_last_dir[seed] for seed in seed_list])]
-    if len(seed_list)>1:
-        h_errors = [np.sqrt(np.var([multi*only_last_dir[seed] for seed in seed_list])/(len(seed_list)-1))]
+    h_lines = [np.mean([multi * only_last_dir[seed] for seed in seed_list])]
+    if len(seed_list) > 1:
+        h_errors = [
+            np.sqrt(
+                np.var([multi * only_last_dir[seed] for seed in seed_list])
+                / (len(seed_list) - 1)
+            )
+        ]
     else:
         h_errors = None
     h_labels = ["only trained on final task"]
     h_colors = ["black"]
 
     # bar-plot
-    figure = plt.plot_bars([means1, means2], names=[names1, names2], colors=[colors, colors], ylabel=ylabel,
-                           yerr=[sems1, sems2] if len(seed_list)>1 else None, ylim=ylim, top_title=title,
-                           title_list=["Additions to Standard GR", "Ablations from BI-R"], vlines=[0.5, 0.5],
-                           alpha=[0.7, 1], dots=[dots1, dots2] if len(seed_list)>1 else None,
-                           h_line=chance_level, h_label="chance level" if chance_level is not None else None,
-                           h_lines=h_lines, h_errors=h_errors, h_labels=h_labels, h_colors=h_colors)
+    figure = plt.plot_bars(
+        [means1, means2],
+        names=[names1, names2],
+        colors=[colors, colors],
+        ylabel=ylabel,
+        yerr=[sems1, sems2] if len(seed_list) > 1 else None,
+        ylim=ylim,
+        top_title=title,
+        title_list=["Additions to Standard GR", "Ablations from BI-R"],
+        vlines=[0.5, 0.5],
+        alpha=[0.7, 1],
+        dots=[dots1, dots2] if len(seed_list) > 1 else None,
+        h_line=chance_level,
+        h_label="chance level" if chance_level is not None else None,
+        h_lines=h_lines,
+        h_errors=h_errors,
+        h_labels=h_labels,
+        h_colors=h_colors,
+    )
 
     # print results to screen
-    for i,name in enumerate(long_names1 if long_names1 is not None else names1):
+    for i, name in enumerate(long_names1 if long_names1 is not None else names1):
         if len(seed_list) > 1:
-            print("{:26s} {:9.2f}  (+/- {:6.2f}),  n={}".format(name, means1[i], sems1[i], len(seed_list)))
+            print(
+                "{:26s} {:9.2f}  (+/- {:6.2f}),  n={}".format(
+                    name, means1[i], sems1[i], len(seed_list)
+                )
+            )
         else:
             print("{:30s} {:9.2f}".format(name, means1[i]))
-    print("-"*60)
-    for i,name in enumerate(long_names2 if long_names2 is not None else names2):
+    print("-" * 60)
+    for i, name in enumerate(long_names2 if long_names2 is not None else names2):
         if len(seed_list) > 1:
-            print("{:26s} {:9.2f}  (+/- {:6.2f}),  n={}".format(name, means2[i], sems2[i], len(seed_list)))
+            print(
+                "{:26s} {:9.2f}  (+/- {:6.2f}),  n={}".format(
+                    name, means2[i], sems2[i], len(seed_list)
+                )
+            )
         else:
             print("{:30s} {:9.2f}".format(name, means2[i]))
-    print("-"*60)
+    print("-" * 60)
 
-    return(figure)
+    return figure
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     ## Load input-arguments & set default values
     args = handle_inputs()
@@ -123,7 +187,7 @@ if __name__ == '__main__':
     # Selected hyper-parameter values (obtained by running `./compare_permMNIST100_hyperParams --per-bir-comp`)
     dg_prop_bir = 0.8
     dg_prop_nF = 0.8
-    dg_prop_nC = 0.
+    dg_prop_nC = 0.0
     dg_prop_nD = 0.6
     dg_prop_oG = 0.2
 
@@ -142,14 +206,13 @@ if __name__ == '__main__':
     if not os.path.isdir(args.p_dir):
         os.mkdir(args.p_dir)
 
-    #-------------------------------------------------------------------------------------------------#
+    # -------------------------------------------------------------------------------------------------#
 
-    #--------------------------#
-    #----- RUN ALL MODELS -----#
-    #--------------------------#
+    # --------------------------#
+    # ----- RUN ALL MODELS -----#
+    # --------------------------#
 
-    seed_list = list(range(args.seed, args.seed+args.n_seeds))
-
+    seed_list = list(range(args.seed, args.seed + args.n_seeds))
 
     ###----"BASELINES"----###
 
@@ -158,7 +221,6 @@ if __name__ == '__main__':
     ONLYLAST = {}
     ONLYLAST = collect_all(ONLYLAST, seed_list, args, name="Only last task")
     args.only_last = False
-
 
     ###----"BI-R"----###
     args.replay = "generative"
@@ -173,14 +235,15 @@ if __name__ == '__main__':
     BIR = {}
     BIR = collect_all(BIR, seed_list, args, name="Brain-Inspired Replay (BI-R)")
 
-
     ###----"Ablating BI-R components"----###
 
     ## No feedback
     args.feedback = False
     args.dg_prop = dg_prop_nF
     BIR_nF = {}
-    BIR_nF = collect_all(BIR_nF, seed_list, args, name="BI-R: no replay-through-feedback")
+    BIR_nF = collect_all(
+        BIR_nF, seed_list, args, name="BI-R: no replay-through-feedback"
+    )
     args.feedback = True
 
     ## No conditional replay
@@ -194,9 +257,11 @@ if __name__ == '__main__':
 
     ## No gating
     args.dg_gates = False
-    args.dg_prop = 0.
+    args.dg_prop = 0.0
     BIR_nG = {}
-    BIR_nG = collect_all(BIR_nG, seed_list, args, name="BI-R: no gating based on internal context")
+    BIR_nG = collect_all(
+        BIR_nG, seed_list, args, name="BI-R: no gating based on internal context"
+    )
     args.dg_gates = True
 
     ## No distillation
@@ -205,7 +270,6 @@ if __name__ == '__main__':
     BIR_nD = {}
     BIR_nD = collect_all(BIR_nD, seed_list, args, name="BI-R: no distillation")
     args.distill = True
-
 
     ###----"Standard GR"----###
     args.replay = "generative"
@@ -218,7 +282,6 @@ if __name__ == '__main__':
     ## Standard GR
     SGR = {}
     SGR = collect_all(SGR, seed_list, args, name="Standard GR (s-GR))")
-
 
     ###----"Adding BI-R components"----###
 
@@ -249,32 +312,42 @@ if __name__ == '__main__':
     SGR_wD = collect_all(SGR_wD, seed_list, args, name="s-GR: with distillation")
     args.distill = False
 
+    # -------------------------------------------------------------------------------------------------#
 
-    #-------------------------------------------------------------------------------------------------#
-
-    #---------------------------#
-    #----- COLLECT RESULTS -----#
-    #---------------------------#
+    # ---------------------------#
+    # ----- COLLECT RESULTS -----#
+    # ---------------------------#
 
     ave_acc_bir = {}
     ave_acc_sg = {}
 
     ## Create lists for all extracted <dicts> and <lists> with fixed order
     for seed in seed_list:
-        ave_acc_bir[seed] = [BIR[seed], BIR_nF[seed], BIR_nC[seed], BIR_nG[seed], BIR_nD[seed]]
-        ave_acc_sg[seed] = [SGR[seed], SGR_wF[seed], SGR_wC[seed], SGR_wG[seed], SGR_wD[seed]]
+        ave_acc_bir[seed] = [
+            BIR[seed],
+            BIR_nF[seed],
+            BIR_nC[seed],
+            BIR_nG[seed],
+            BIR_nD[seed],
+        ]
+        ave_acc_sg[seed] = [
+            SGR[seed],
+            SGR_wF[seed],
+            SGR_wC[seed],
+            SGR_wG[seed],
+            SGR_wD[seed],
+        ]
 
+    # -------------------------------------------------------------------------------------------------#
 
-    #-------------------------------------------------------------------------------------------------#
-
-    #--------------------#
-    #----- PLOTTING -----#
-    #--------------------#
+    # --------------------#
+    # ----- PLOTTING -----#
+    # --------------------#
 
     # print header to screen
     scheme = "incremental {} learning".format(args.scenario)
     title = "{}  -  {}".format(args.experiment, scheme)
-    print("\n\n\n"+"#"*60+"\nSUMMARY RESULTS: {}\n".format(title)+"#"*60)
+    print("\n\n\n" + "#" * 60 + "\nSUMMARY RESULTS: {}\n".format(title) + "#" * 60)
 
     # open pdf
     plot_name = "birPerComp-{}{}-{}".format(args.experiment, args.tasks, args.scenario)
@@ -283,19 +356,45 @@ if __name__ == '__main__':
 
     # select names / colors / ids
     names_bir = ["BI-R", "- rtf", "- con", "- gat", "- dis"]
-    long_names_bir = ["BI-R", "- replay-through-feedback", "- conditional replay", "- gating", "- distillation"]
+    long_names_bir = [
+        "BI-R",
+        "- replay-through-feedback",
+        "- conditional replay",
+        "- gating",
+        "- distillation",
+    ]
     names_sg = ["s-GR", "+ rtf", "+ con", "+ gat", "+ dis"]
-    long_names_sg = ["s-GR", "+ replay-through-feedback", "+ conditional replay", "+ gating", "+ distillation"]
+    long_names_sg = [
+        "s-GR",
+        "+ replay-through-feedback",
+        "+ conditional replay",
+        "+ gating",
+        "+ distillation",
+    ]
     colors = ["black", "maroon", "red", "orangered", "green"]
-    ids = [0,1,2,3,4]
+    ids = [0, 1, 2, 3, 4]
 
     ##--- AVERAGE ACCURACY ---##
     ylabel = "Average test accuracy (over all {} permutations)".format(args.tasks)
     title = "AVERAGE TEST ACCURACY (in %)"
-    print("\n{}\n".format(title)+"-"*60)
-    figure = barplots(ave_acc_sg, ave_acc_bir, names_sg, names_bir, ids, colors, seed_list, only_last_dir=ONLYLAST,
-                      chance_level=10, long_names1=long_names_sg, long_names2=long_names_bir,
-                      ylabel=ylabel, title=title, ylim=None, perc=True)
+    print("\n{}\n".format(title) + "-" * 60)
+    figure = barplots(
+        ave_acc_sg,
+        ave_acc_bir,
+        names_sg,
+        names_bir,
+        ids,
+        colors,
+        seed_list,
+        only_last_dir=ONLYLAST,
+        chance_level=10,
+        long_names1=long_names_sg,
+        long_names2=long_names_bir,
+        ylabel=ylabel,
+        title=title,
+        ylim=None,
+        perc=True,
+    )
     figure_list.append(figure)
 
     # add figures to pdf

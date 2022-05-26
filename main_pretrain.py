@@ -13,15 +13,21 @@ import options
 import define_models as define
 
 
-
-
 ## Function for specifying input-options and organizing / checking them
 def handle_inputs():
     # Set indicator-dictionary for correctly retrieving / checking input options
-    kwargs = {'single_task': True, 'only_MNIST': False, 'generative': False, 'compare_code': 'none',
-              'train_options': 'all'}
+    kwargs = {
+        "single_task": True,
+        "only_MNIST": False,
+        "generative": False,
+        "compare_code": "none",
+        "train_options": "all",
+    }
     # Define input options
-    parser = options.define_args(filename="main_pretrain", description='Train classifier for pretraining conv-layers.')
+    parser = options.define_args(
+        filename="main_pretrain",
+        description="Train classifier for pretraining conv-layers.",
+    )
     parser = options.add_general_options(parser, **kwargs)
     parser = options.add_eval_options(parser, **kwargs)
     parser = options.add_task_options(parser, **kwargs)
@@ -32,7 +38,6 @@ def handle_inputs():
     options.set_defaults(args, **kwargs)
     options.check_for_errors(args, **kwargs)
     return args
-
 
 
 ## Function for running one experiment
@@ -55,37 +60,41 @@ def run(args):
     if args.pdf and not os.path.isdir(args.p_dir):
         os.mkdir(args.p_dir)
 
-    #-------------------------------------------------------------------------------------------------#
+    # -------------------------------------------------------------------------------------------------#
 
-    #----------------#
-    #----- DATA -----#
-    #----------------#
+    # ----------------#
+    # ----- DATA -----#
+    # ----------------#
 
     # Prepare data for chosen experiment
     print("\nPreparing the data...")
     (trainset, testset), config = get_singletask_experiment(
-        name=args.experiment, data_dir=args.d_dir, verbose=True,
-        normalize = True if utils.checkattr(args, "normalize") else False,
-        augment = True if utils.checkattr(args, "augment") else False,
+        name=args.experiment,
+        data_dir=args.d_dir,
+        verbose=True,
+        normalize=True if utils.checkattr(args, "normalize") else False,
+        augment=True if utils.checkattr(args, "augment") else False,
     )
 
     # Specify "data-loader" (among others for easy random shuffling and 'batchifying')
-    train_loader = utils.get_data_loader(trainset, batch_size=args.batch, cuda=cuda, drop_last=True)
+    train_loader = utils.get_data_loader(
+        trainset, batch_size=args.batch, cuda=cuda, drop_last=True
+    )
 
     # Determine number of iterations / epochs:
-    iters = args.iters if args.iters else args.epochs*len(train_loader)
-    epochs = ((args.iters-1) // len(train_loader)) + 1 if args.iters else args.epochs
+    iters = args.iters if args.iters else args.epochs * len(train_loader)
+    epochs = ((args.iters - 1) // len(train_loader)) + 1 if args.iters else args.epochs
 
+    # -------------------------------------------------------------------------------------------------#
 
-    #-------------------------------------------------------------------------------------------------#
-
-    #-----------------#
-    #----- MODEL -----#
-    #-----------------#
+    # -----------------#
+    # ----- MODEL -----#
+    # -----------------#
 
     # Specify model
-    if (utils.checkattr(args, "pre_convE") or utils.checkattr(args, "pre_convD")) and \
-            (hasattr(args, "depth") and args.depth>0):
+    if (utils.checkattr(args, "pre_convE") or utils.checkattr(args, "pre_convD")) and (
+        hasattr(args, "depth") and args.depth > 0
+    ):
         print("\nDefining the model...")
     cnn = define.define_classifier(args=args, config=config, device=device)
 
@@ -95,7 +104,7 @@ def run(args):
     if utils.checkattr(args, "freeze_convE"):
         for param in cnn.convE.parameters():
             param.requires_grad = False
-        cnn.convE.eval()  #--> needed to ensure batchnorm-layers also do not change
+        cnn.convE.eval()  # --> needed to ensure batchnorm-layers also do not change
     # - freeze weights of representation-learning layers?
     if utils.checkattr(args, "freeze_full"):
         for param in cnn.parameters():
@@ -104,15 +113,16 @@ def run(args):
             param.requires_grad = True
 
     # Set optimizer
-    optim_list = [{'params': filter(lambda p: p.requires_grad, cnn.parameters()), 'lr': args.lr}]
+    optim_list = [
+        {"params": filter(lambda p: p.requires_grad, cnn.parameters()), "lr": args.lr}
+    ]
     cnn.optimizer = torch.optim.Adam(optim_list, betas=(0.9, 0.999))
 
+    # -------------------------------------------------------------------------------------------------#
 
-    #-------------------------------------------------------------------------------------------------#
-
-    #---------------------#
-    #----- REPORTING -----#
-    #---------------------#
+    # ---------------------#
+    # ----- REPORTING -----#
+    # ---------------------#
 
     # Get parameter-stamp
     print("\nParameter-stamp...")
@@ -126,13 +136,15 @@ def run(args):
 
     # Prepare for plotting in visdom
     graph_name = cnn.name
-    visdom = None if (not args.visdom) else {'env': args.experiment, 'graph': graph_name}
+    visdom = (
+        None if (not args.visdom) else {"env": args.experiment, "graph": graph_name}
+    )
 
-    #-------------------------------------------------------------------------------------------------#
+    # -------------------------------------------------------------------------------------------------#
 
-    #---------------------#
-    #----- CALLBACKS -----#
-    #---------------------#
+    # ---------------------#
+    # ----- CALLBACKS -----#
+    # ---------------------#
 
     # Determine after how many iterations to evaluate the model
     eval_log = args.acc_log if (args.acc_log is not None) else len(train_loader)
@@ -141,42 +153,58 @@ def run(args):
     # -loss
     loss_cbs = [cb._solver_loss_cb(log=args.loss_log, visdom=visdom, epochs=epochs)]
     # -accuracy
-    eval_cb = cb._eval_cb(log=eval_log, test_datasets=[testset], visdom=visdom, progress_dict=progress_dict)
+    eval_cb = cb._eval_cb(
+        log=eval_log,
+        test_datasets=[testset],
+        visdom=visdom,
+        progress_dict=progress_dict,
+    )
     # -visualize extracted representation
-    latent_space_cb = cb._latent_space_cb(log=min(5*eval_log, iters), datasets=[testset], visdom=visdom,
-                                          sample_size=400)
+    latent_space_cb = cb._latent_space_cb(
+        log=min(5 * eval_log, iters), datasets=[testset], visdom=visdom, sample_size=400
+    )
 
+    # -------------------------------------------------------------------------------------------------#
 
-    #-------------------------------------------------------------------------------------------------#
-
-    #--------------------------#
-    #----- (PRE-)TRAINING -----#
-    #--------------------------#
+    # --------------------------#
+    # ----- (PRE-)TRAINING -----#
+    # --------------------------#
 
     # (Pre)train model
     print("\nTraining...")
-    train.train(cnn, train_loader, iters, loss_cbs=loss_cbs, eval_cbs=[eval_cb, latent_space_cb],
-                save_every=1000 if args.save else None, m_dir=args.m_dir, args=args)
+    train.train(
+        cnn,
+        train_loader,
+        iters,
+        loss_cbs=loss_cbs,
+        eval_cbs=[eval_cb, latent_space_cb],
+        save_every=1000 if args.save else None,
+        m_dir=args.m_dir,
+        args=args,
+    )
 
     # Save (pre)trained model
     if args.save:
         # -conv-layers
-        save_name = cnn.convE.name if (
-            not hasattr(args, 'convE_stag') or args.convE_stag=="none"
-        ) else "{}-{}".format(cnn.convE.name, args.convE_stag)
+        save_name = (
+            cnn.convE.name
+            if (not hasattr(args, "convE_stag") or args.convE_stag == "none")
+            else "{}-{}".format(cnn.convE.name, args.convE_stag)
+        )
         utils.save_checkpoint(cnn.convE, args.m_dir, name=save_name)
         # -full model
-        save_name = cnn.name if (
-            not hasattr(args, 'full_stag') or args.full_stag=="none"
-        ) else "{}-{}".format(cnn.name, args.full_stag)
+        save_name = (
+            cnn.name
+            if (not hasattr(args, "full_stag") or args.full_stag == "none")
+            else "{}-{}".format(cnn.name, args.full_stag)
+        )
         utils.save_checkpoint(cnn, args.m_dir, name=save_name)
 
+    # -------------------------------------------------------------------------------------------------#
 
-    #-------------------------------------------------------------------------------------------------#
-
-    #--------------------#
-    #----- PLOTTING -----#
-    #--------------------#
+    # --------------------#
+    # ----- PLOTTING -----#
+    # --------------------#
 
     # if requested, generate pdf.
     if args.pdf:
@@ -184,11 +212,20 @@ def run(args):
         plot_name = "{}/{}.pdf".format(args.p_dir, param_stamp)
         pp = plt.open_pdf(plot_name)
         # -Fig1: show some images
-        images, _ = next(iter(train_loader))            #--> get a mini-batch of random training images
-        plt.plot_images_from_tensor(images, pp, title="example input images", config=config)
+        images, _ = next(
+            iter(train_loader)
+        )  # --> get a mini-batch of random training images
+        plt.plot_images_from_tensor(
+            images, pp, title="example input images", config=config
+        )
         # -Fig2: accuracy
-        figure = plt.plot_lines(progress_dict["all_tasks"], x_axes=progress_dict["x_iteration"],
-                                line_names=['ave accuracy'], xlabel="Iterations", ylabel="Test accuracy")
+        figure = plt.plot_lines(
+            progress_dict["all_tasks"],
+            x_axes=progress_dict["x_iteration"],
+            line_names=["ave accuracy"],
+            xlabel="Iterations",
+            ylabel="Test accuracy",
+        )
         pp.savefig(figure)
         # -close pdf
         pp.close()
@@ -196,7 +233,6 @@ def run(args):
         print("\nGenerated plot: {}\n".format(plot_name))
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = handle_inputs()
     run(args)

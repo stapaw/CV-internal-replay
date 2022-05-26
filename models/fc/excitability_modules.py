@@ -26,7 +26,7 @@ def linearExcitability(input, weight, excitability=None, bias=None):
 
 
 class LinearExcitability(nn.Module):
-    '''Applies a linear transformation to the incoming data: :math:`y = c(Ax) + b`
+    """Applies a linear transformation to the incoming data: :math:`y = c(Ax) + b`
 
     Args:
         in_features:    size of each input sample
@@ -50,9 +50,16 @@ class LinearExcitability(nn.Module):
         >>> input = autograd.Variable(torch.randn(128, 20))
         >>> output = m(input)
         >>> print(output.size())
-    '''
+    """
 
-    def __init__(self, in_features, out_features, bias=True, excitability=False, excit_buffer=False):
+    def __init__(
+        self,
+        in_features,
+        out_features,
+        bias=True,
+        excitability=False,
+        excit_buffer=False,
+    ):
         super(LinearExcitability, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -60,21 +67,21 @@ class LinearExcitability(nn.Module):
         if excitability:
             self.excitability = Parameter(torch.Tensor(out_features))
         else:
-            self.register_parameter('excitability', None)
+            self.register_parameter("excitability", None)
         if bias:
             self.bias = Parameter(torch.Tensor(out_features))
         else:
-            self.register_parameter('bias', None)
+            self.register_parameter("bias", None)
         if excit_buffer:
-            buffer = torch.Tensor(out_features).uniform_(1,1)
+            buffer = torch.Tensor(out_features).uniform_(1, 1)
             self.register_buffer("excit_buffer", buffer)
         else:
             self.register_buffer("excit_buffer", None)
         self.reset_parameters()
 
     def reset_parameters(self):
-        '''Modifies the parameters "in-place" to reset them at appropriate initialization values'''
-        stdv = 1. / math.sqrt(self.weight.size(1))
+        """Modifies the parameters "in-place" to reset them at appropriate initialization values"""
+        stdv = 1.0 / math.sqrt(self.weight.size(1))
         self.weight.data.uniform_(-stdv, stdv)
         if self.excitability is not None:
             self.excitability.data.uniform_(1, 1)
@@ -82,18 +89,24 @@ class LinearExcitability(nn.Module):
             self.bias.data.uniform_(-stdv, stdv)
 
     def forward(self, input):
-        '''Running this model's forward step requires/returns:
+        """Running this model's forward step requires/returns:
         INPUT: -[input]: [batch_size]x[...]x[in_features]
-        OUTPUT: -[output]: [batch_size]x[...]x[hidden_features]'''
+        OUTPUT: -[output]: [batch_size]x[...]x[hidden_features]"""
         if self.excit_buffer is None:
             excitability = self.excitability
         elif self.excitability is None:
             excitability = self.excit_buffer
         else:
-            excitability = self.excitability*self.excit_buffer
+            excitability = self.excitability * self.excit_buffer
         return linearExcitability(input, self.weight, excitability, self.bias)
 
     def __repr__(self):
-        return self.__class__.__name__ + '(' \
-               + 'in_features=' + str(self.in_features) \
-               + ', out_features=' + str(self.out_features) + ')'
+        return (
+            self.__class__.__name__
+            + "("
+            + "in_features="
+            + str(self.in_features)
+            + ", out_features="
+            + str(self.out_features)
+            + ")"
+        )
