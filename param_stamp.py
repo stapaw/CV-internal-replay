@@ -125,10 +125,15 @@ def get_param_stamp(args, model_name, verbose=True, replay=False, replay_model_n
     else:
         recon_stamp = ""
 
+    if args.freeze_fcE:
+        fcE_stamp = "fc-and-further".format(args.freeze_fcE_layer)
+    else:
+        fcE_stamp = ""
+
     # --> combine
-    param_stamp = "{}--{}--{}{}{}{}{}{}".format(
+    param_stamp = "{}--{}--{}{}{}{}{}{}{}".format(
         task_stamp, model_stamp, hyper_stamp, ewc_stamp, xdg_stamp, replay_stamp,
-        recon_stamp, "-s{}".format(args.seed) if not args.seed==0 else "",
+        recon_stamp, fcE_stamp, "-s{}".format(args.seed) if not args.seed==0 else "",
     )
 
     ## Print param-stamp on screen and return

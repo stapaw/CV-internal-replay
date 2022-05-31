@@ -164,6 +164,11 @@ def add_train_options(parser, only_MNIST=False, single_task=False, generative=Fa
             train_params.add_argument('--freeze-convD', action='store_true', help="freeze parameters of convD-layers")
     if generative:
         train_params.add_argument('--recon-loss', type=str, choices=['MSE', 'BCE'])
+    if compare_code in ("none"):
+        train_params.add_argument("--freeze-fcE", action="store_true", help="freeze parameters of fcE-layers")
+    if compare_code in ("none"):
+        train_params.add_argument("--freeze-fcE-layer", type=int, default=1,
+                                  help="freeze parameters of fcE-layers from particular layer")
     return parser
 
 

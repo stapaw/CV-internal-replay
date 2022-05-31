@@ -75,10 +75,6 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
     [feedback]          <bool>, if True and [replay_mode]="generative", the main model is used for generating replay
     [only_last]         <bool>, only train on final task / episode
     [*_cbs]             <list> of call-back functions to evaluate training-progress'''
-
-    # Should convolutional layers be frozen?
-    freeze_convE = (utils.checkattr(args, "freeze_convE") and hasattr(args, "depth") and args.depth>0)
-
     # Use cuda?
     device = model._device()
     cuda = model._is_on_cuda()
@@ -99,6 +95,15 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
 
     # Loop over all tasks.
     for task, train_dataset in enumerate(train_datasets, 1):
+        freeze_convE = (utils.checkattr(args, "freeze_convE") and hasattr(args, "depth")
+                        and args.depth > 0 and task != 1)
+        freeze_fcE = (utils.checkattr(args, "freeze_fcE") and task != 1)
+        if freeze_fcE:
+            freeze_from_fc = args.freeze_fcE_layer
+            # Classifier
+            for name, param in model.fcE.named_parameters():
+                if int(name.split('.')[0][-1]) >= int(freeze_from_fc):
+                    param.requires_grad = False
 
         # If offline replay-setting, create large database of all tasks so far
         if replay_mode=="offline" and (not scenario=="task"):
