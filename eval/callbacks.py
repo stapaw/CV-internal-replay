@@ -55,7 +55,7 @@ def _eval_cb(log, test_datasets, visdom=None, progress_dict=None, iters_per_task
         if iteration % log == 0:
             evaluate.test_accuracy(classifier, test_datasets, task, iteration,
                                    classes_per_task=classes_per_task, scenario=scenario, progress_dict=progress_dict,
-                                   test_size=test_size, visdom=visdom)
+                                   test_size=test_size, visdom=visdom, verbose=True)
 
     ## Return the callback-function (except if neither visdom or [progress_dict] is selected!)
     return eval_cb if ((visdom is not None) or (progress_dict is not None)) else None

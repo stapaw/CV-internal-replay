@@ -84,35 +84,8 @@ For information on further options: `./main_cl.py -h`.
 PyTorch-implementations for several methods relying on stored data (Experience Replay, iCaRL and A-GEM), as well as for additional metrics (FWT, BWT, forgetting, intransigence), can be found here: <https://github.com/GMvandeVen/continual-learning>.
 
 
-## On-the-fly plots during training
-With this code it is possible to track progress during training with on-the-fly plots. This feature requires `visdom`.
-Before running the experiments, the visdom server should be started from the command line:
+## Run conv experiments on fmnist
 ```bash
-python -m visdom.server
+./main_cl.py    --experiment=fmnist    --scenario=class    --tasks 5    --batch 128    --seed 0 --replay=generative    --prior=GMM    --per-class    --g-z-dim 10    --sample-n 30    --pdf --depth=3 --reducing-layers=2 --channels=16 --fc-layers=2 --fc-units 100 --gen-iters=2000 --conv-bn=False
 ```
-The visdom server is now alive and can be accessed at `http://localhost:8097` in your browser (the plots will appear
-there). The flag `--visdom` should then be added when calling `./main_cl.py` to run the experiments with on-the-fly plots.
-
-For more information on `visdom` see <https://github.com/facebookresearch/visdom>.
-
-
-### Citation
-Please consider citing our paper if you use this code in your research:
-```
-@article{vandeven2020brain,
-  title={Brain-inspired replay for continual learning with artificial neural networks},
-  author={van de Ven, Gido M and Siegelmann, Hava T and Tolias, Andreas S},
-  journal={Nature Communications},
-  volume={11},
-  pages={4069},
-  year={2020}
-}
-```
-
-### Acknowledgments
-The research project from which this code originated has been supported by an IBRO-ISN Research Fellowship, by the 
-Lifelong Learning Machines (L2M) program of the Defence Advanced Research Projects Agency (DARPA) via contract number 
-HR0011-18-2-0025 and by the Intelligence Advanced Research Projects Activity (IARPA) via Department of 
-Interior/Interior Business Center (DoI/IBC) contract number D16PC00003. Disclaimer: views and conclusions 
-contained herein are those of the authors and should not be interpreted as necessarily representing the official
-policies or endorsements, either expressed or implied, of DARPA, IARPA, DoI/IBC, or the U.S. Government.
+Should give about 76 % acc
