@@ -182,6 +182,7 @@ class Classifier(ContinualLearner):
         task=1,
         replay_not_hidden=False,
         freeze_convE=False,
+        freeze_fcE=True,
         **kwargs
     ):
         """Train model for one batch ([x],[y]), possibly supplemented with replayed data ([x_],[y_]).
@@ -202,6 +203,8 @@ class Classifier(ContinualLearner):
         if freeze_convE:
             # - if conv-layers are frozen, they shoud be set to eval() to prevent batch-norm layers from changing
             self.convE.eval()
+        if freeze_fcE:
+            self.fcE.eval()
 
         # Reset optimizer
         self.optimizer.zero_grad()

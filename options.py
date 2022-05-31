@@ -425,6 +425,19 @@ def add_train_options(
                 action="store_true",
                 help="freeze parameters of convD-layers",
             )
+        if compare_code in ("none"):
+            train_params.add_argument(
+                "--freeze-fcE",
+                action="store_true",
+                help="freeze parameters of fcE-layers",
+            )
+        if compare_code in ("none"):
+            train_params.add_argument(
+                "--freeze-fcE-layer",
+                type=int,
+                default=1,
+                help="freeze parameters of fcE-layers from particular layer",
+            )
     if generative:
         train_params.add_argument("--recon-loss", type=str, choices=["MSE", "BCE"])
     return parser
@@ -764,7 +777,7 @@ def set_defaults(
         )
     # -set hyper-parameter values (typically found by grid-search) based on chosen experiment & scenario
     if not single_task and not compare_code in ("hyper", "bir"):
-        if args.experiment in ["splitMNIST", "fmnist"]:
+        if args.experiment in ["splitM NIST", "fmnist"]:
             args.xdg_prop = (
                 0.9
                 if args.scenario == "task" and args.xdg_prop is None

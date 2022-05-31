@@ -127,6 +127,7 @@ def run(args, verbose=False):
     # - initialize (pre-trained) parameters
     model = define.init_params(model, args)
     # - freeze weights of conv-layers?
+    # TODO: Here model layers are frozen !!!
     if utils.checkattr(args, "freeze_convE"):
         for param in model.convE.parameters():
             param.requires_grad = False

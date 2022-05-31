@@ -235,6 +235,7 @@ def get_param_stamp(
         recon_stamp,
         "-s{}".format(args.seed) if not args.seed == 0 else "",
     )
+    param_stamp+="{}fc-and-further".format(args.freeze_fcE_layer)
 
     ## Print param-stamp on screen and return
     if verbose:
