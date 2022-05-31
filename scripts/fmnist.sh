@@ -20,6 +20,7 @@
   --gen-iters=2000 \
   --conv-bn=False \
   --distill \
+  --freeze-convE \
   --freeze-fcE \
   --freeze-fcE-layer=2
 
@@ -43,6 +44,7 @@
   --gen-iters=2000 \
   --conv-bn=False \
   --distill \
+  --freeze-convE \
   --freeze-fcE \
   --freeze-fcE-layer=1
 
@@ -65,4 +67,6 @@
   --fc-units 100 \
   --gen-iters=2000 \
   --conv-bn=False \
-  --distill
+  --distill \
+  --freeze-convE
+

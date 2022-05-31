@@ -126,7 +126,7 @@ def get_param_stamp(args, model_name, verbose=True, replay=False, replay_model_n
         recon_stamp = ""
 
     if args.freeze_fcE:
-        fcE_stamp = "fc-and-further".format(args.freeze_fcE_layer)
+        fcE_stamp = "--fc{}-and-further".format(args.freeze_fcE_layer)
     else:
         fcE_stamp = ""
 

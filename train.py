@@ -99,10 +99,9 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                         and args.depth > 0 and task != 1)
         freeze_fcE = (utils.checkattr(args, "freeze_fcE") and task != 1)
         if freeze_fcE:
-            freeze_from_fc = args.freeze_fcE_layer
             # Classifier
-            for name, param in model.fcE.named_parameters():
-                if int(name.split('.')[0][-1]) >= int(freeze_from_fc):
+            for layer_idx in range(model.fcE.layers, args.freeze_fcE_layer + 1):
+                for name, param in getattr(model.fcE, "fcLayer{}".format(layer_idx)).named_parameters():
                     param.requires_grad = False
 
         # If offline replay-setting, create large database of all tasks so far
