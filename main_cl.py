@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import random
 import numpy as np
 import os
 from scipy.stats import entropy
@@ -66,11 +67,13 @@ def run(args, verbose=False):
         print("CUDA is {}used".format("" if cuda else "NOT(!!) "))
 
     # Set random seeds
+    random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     if cuda:
         torch.cuda.manual_seed(args.seed)
-
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     #-------------------------------------------------------------------------------------------------#
 
