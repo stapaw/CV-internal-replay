@@ -178,7 +178,7 @@ def _solver_loss_cb(
                 else " Epoch: {}/{} |".format(epoch, epochs)
             )
             bar.set_description(
-                " <MAIN MODEL> |{t_stm}{e_stm} training loss: {loss:.3} | training accuracy: {acc:.3} |".format(
+                " <MAIN MODEL> |{t_stm}{e_stm} training loss: {loss:.3f} | training accuracy: {acc:.3f} |".format(
                     t_stm=task_stm,
                     e_stm=epoch_stm,
                     loss=loss_dict["loss_total"],
@@ -256,7 +256,7 @@ def _VAE_loss_cb(
                 else " Epoch: {}/{} |".format(epoch, epochs)
             )
             bar.set_description(
-                " <GENERATOR>  |{t_stm}{e_stm} training loss: {loss:.3} | training accuracy: {acc:.3} |".format(
+                " <GENERATOR>  |{t_stm}{e_stm} training loss: {loss:.3f} | training accuracy: {acc:.3f} |".format(
                     t_stm=task_stm,
                     e_stm=epoch_stm,
                     loss=loss_dict["loss_total"],
