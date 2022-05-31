@@ -286,8 +286,12 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
             #---> Train MAIN MODEL
             if batch_index <= iters_main:
 
-                # Train the main model with this batch
-                loss_dict = model.train_a_batch(x, y=y, x_=x_, y_=y_, scores_=scores_,
+                #Train the main model with this batch (if generator exists use generations from VAE)
+                if generator is not None:
+                    x_cls, _, _, _, _ = generator.forward(x, full=True)
+                else:
+                    x_cls = x
+                loss_dict = model.train_a_batch(x_cls, y=y, x_=x_, y_=y_, scores_=scores_,
                                                 tasks_=task_used, active_classes=active_classes, task=task, rnt=(
                                                     1. if task==1 else 1./task
                                                 ) if rnt is None else rnt, freeze_convE=freeze_convE,
