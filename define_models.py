@@ -169,6 +169,7 @@ def define_classifier(args, config, device):
             fc_bn=True if args.fc_bn == "yes" else False,
             fc_nl=args.fc_nl,
             excit_buffer=True,
+            hidden=checkattr(args, "hidden"),
         ).to(device)
     # -return model
     return model
