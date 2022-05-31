@@ -777,7 +777,7 @@ def set_defaults(
         )
     # -set hyper-parameter values (typically found by grid-search) based on chosen experiment & scenario
     if not single_task and not compare_code in ("hyper", "bir"):
-        if args.experiment in ["splitM NIST", "fmnist"]:
+        if args.experiment in ["splitMNIST", "fmnist"]:
             args.xdg_prop = (
                 0.9
                 if args.scenario == "task" and args.xdg_prop is None
