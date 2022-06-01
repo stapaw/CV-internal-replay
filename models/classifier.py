@@ -19,7 +19,7 @@ class Classifier(ContinualLearner):
                  fc_layers=3, fc_units=1000, h_dim=400, fc_drop=0, fc_bn=True, fc_nl="relu", fc_gated=False,
                  bias=True, excitability=False, excit_buffer=False,
                  # -training-specific settings (can be changed after setting up model)
-                 hidden=False):
+                 hidden=False, fc_latent_layer=0):
 
         # model configurations
         super().__init__()
@@ -67,6 +67,7 @@ class Classifier(ContinualLearner):
         #--> classifier
         self.classifier = fc_layer(self.units_before_classifier, classes, excit_buffer=True, nl='none', drop=fc_drop)
 
+        self.fc_latent_layer = fc_latent_layer
 
     def list_init_layers(self):
         '''Return list of modules whose parameters could be initialized differently (i.e., conv- or fc-layers).'''
@@ -106,10 +107,10 @@ class Classifier(ContinualLearner):
         return self.fcE(self.flatten(images if from_hidden else self.convE(images)))
         #return self.classifier(self.fcE(self.flatten(images if from_hidden else self.convE(images))))
 
-    def classify(self, x, not_hidden=False):
+    def classify(self, x, not_hidden=False, skip_first=0):
         '''For input [x] (image or extracted "intermediate" image features), return all predicted "scores"/"logits".'''
         image_features = self.flatten(x) if (self.hidden and not not_hidden) else self.flatten(self.convE(x))
-        hE = self.fcE(image_features)
+        hE = self.fcE(image_features, skip_first=skip_first)
         return self.classifier(hE)
 
 
@@ -192,7 +193,7 @@ class Classifier(ContinualLearner):
 
             # Run model (if [x_] is not a list with separate replay per task and there is no task-specific mask)
             if (not type(x_)==list) and (self.mask_dict is None):
-                y_hat_all = self.classify(x_, not_hidden=replay_not_hidden)
+                y_hat_all = self.classify(x_, not_hidden=replay_not_hidden, skip_first=self.fc_latent_layer)
 
             # Loop to perform each replay
             for replay_id in range(n_replays):
@@ -202,7 +203,7 @@ class Classifier(ContinualLearner):
                     x_temp_ = x_[replay_id] if type(x_) == list else x_
                     if self.mask_dict is not None:
                         self.apply_XdGmask(task=replay_id + 1)
-                    y_hat_all = self.classify(x_temp_, not_hidden=replay_not_hidden)
+                    y_hat_all = self.classify(x_temp_, not_hidden=replay_not_hidden, skip_first=self.fc_latent_layer)
 
                 # -if needed (e.g., "class" or "task" scenario), remove predictions for classes not in replayed task
                 y_hat = y_hat_all if (active_classes is None) else y_hat_all[:, active_classes[replay_id]]

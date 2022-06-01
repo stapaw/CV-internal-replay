@@ -12,7 +12,7 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
         model = AutoEncoder(
             image_size=config['size'], image_channels=config['channels'], classes=config['classes'],
             # -conv-layers
-            conv_type=args.conv_type, depth=args.g_depth if generator  and hasattr(args, 'g_depth') else args.depth,
+            conv_type=args.conv_type, depth=args.depth-args.fc_latent_layer,
             start_channels=args.channels, reducing_layers=args.rl, conv_bn=(args.conv_bn=="yes"), conv_nl=args.conv_nl,
             num_blocks=args.n_blocks, convE=convE, global_pooling=False if generator else checkattr(args, 'gp'),
             # -fc-layers
@@ -91,6 +91,7 @@ def define_classifier(args, config, device):
             fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl, excit_buffer=True,
             # -training-specific components
             hidden=checkattr(args, 'hidden'),
+            fc_latent_layer=args.fc_latent_layer
         ).to(device)
     else:
         model = Classifier(
