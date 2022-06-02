@@ -233,7 +233,7 @@ def add_bir_options(parser, only_MNIST=False, compare_code="none", **kwargs):
     # -hidden replay
     if (not only_MNIST) and compare_code in ("none"):
         BIR.add_argument('--hidden', action="store_true", help="replay at 'internal level' (after conv-layers)")
-        BIR.add_argument("--fc-latent-layer", default=0, help="index of input layer at which latent replay starts")
+        BIR.add_argument("--fc-latent-layer", default=0, type=int, help="index of input layer at which latent replay starts")
     return parser
 
 

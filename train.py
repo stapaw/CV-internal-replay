@@ -243,7 +243,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                 if scenario in ("domain", "class") and previous_model.mask_dict is None:
                     # -if replay does not need to be evaluated for each task (ie, not Task-IL and no task-specific mask)
                     with torch.no_grad():
-                        all_scores_ = previous_model.classify(x_, not_hidden=False if Generative else True)
+                        all_scores_ = previous_model.classify(x_, not_hidden=False if Generative else True, skip_first=args.fc_latent_layer)
                     scores_ = all_scores_[:, :(classes_per_task*(task-1))] if (
                             scenario=="class"
                     ) else all_scores_ # -> when scenario=="class", zero probs will be added in [loss_fn_kd]-function
@@ -338,7 +338,6 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
 
             #---> Train GENERATOR
             if generator is not None and batch_index <= iters_gen:
-
                 loss_dict = generator.train_a_batch(x, y=y, x_=x_, y_=y_, scores_=scores_,
                                                     tasks_=task_used, active_classes=active_classes, rnt=(
                                                         1. if task==1 else 1./task

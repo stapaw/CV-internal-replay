@@ -12,7 +12,7 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
         model = AutoEncoder(
             image_size=config['size'], image_channels=config['channels'], classes=config['classes'],
             # -conv-layers
-            conv_type=args.conv_type, depth=args.depth-args.fc_latent_layer,
+            conv_type=args.conv_type, depth=args.depth,
             start_channels=args.channels, reducing_layers=args.rl, conv_bn=(args.conv_bn=="yes"), conv_nl=args.conv_nl,
             num_blocks=args.n_blocks, convE=convE, global_pooling=False if generator else checkattr(args, 'gp'),
             # -fc-layers
@@ -40,6 +40,7 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
             lamda_rcl=1. if not hasattr(args, 'rcl') else args.rcl,
             lamda_vl=1. if not hasattr(args, 'vl') else args.vl,
             lamda_pl=(0. if generator else 1.) if not hasattr(args, 'pl') else args.pl,
+            fc_latent_layer=args.fc_latent_layer
         ).to(device)
     else:
         model = AutoEncoder(
@@ -68,6 +69,7 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
             lamda_rcl=1. if not hasattr(args, 'rcl') else args.rcl,
             lamda_vl=1. if not hasattr(args, 'vl') else args.vl,
             lamda_pl=(0. if generator else 1.) if not hasattr(args, 'pl') else args.pl,
+            fc_latent_layer=args.fc_latent_layer
         ).to(device)
     # -return model
     return model

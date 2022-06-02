@@ -30,7 +30,8 @@ class AutoEncoder(ContinualLearner):
                  # -classifer
                  classifier=True, classify_opt="beforeZ",
                  # -training-specific settings (can be changed after setting up model)
-                 lamda_pl=0., lamda_rcl=1., lamda_vl=1., **kwargs):
+                 lamda_pl=0., lamda_rcl=1., lamda_vl=1.,
+                 fc_latent_layer=0, **kwargs):
 
         # Set configurations for setting up the model
         super().__init__()
@@ -135,7 +136,8 @@ class AutoEncoder(ContinualLearner):
                 gated=fc_gated, output=self.network_output if (self.depth==0 or self.hidden) else 'normal',
             )
         # to image-shape
-        self.to_image = modules.Reshape(image_channels=self.convE.out_channels if self.depth>0 else image_channels)
+        self.to_image = modules.Reshape(image_channels=self.convE.out_channels if self.depth>0 else image_channels) \
+            if (not self.hidden) else modules.Identity()
         # through deconv-layers
         self.convD = DeconvLayers(
             image_channels=image_channels, final_channels=start_channels, depth=self.depth,
@@ -153,6 +155,7 @@ class AutoEncoder(ContinualLearner):
             self.z_class_means.data.normal_()
             self.z_class_logvars.data.normal_()
 
+        self.fc_latent_layer = fc_latent_layer
 
 
     ##------ NAMES --------##
@@ -209,14 +212,14 @@ class AutoEncoder(ContinualLearner):
 
     ##------ FORWARD FUNCTIONS --------##
 
-    def encode(self, x, not_hidden=False):
+    def encode(self, x, not_hidden=False, skip_first=0):
         '''Pass input through feed-forward connections, to get [z_mean], [z_logvar] and [hE].
         Input [x] is either an image or, if [self.hidden], extracted "intermediate" or "internal" image features.'''
         # Forward-pass through conv-layers
         hidden_x = x if (self.hidden and not not_hidden) else self.convE(x)
         image_features = self.flatten(hidden_x)
         # Forward-pass through fc-layers
-        hE = self.fcE(image_features)
+        hE = self.fcE(image_features, skip_first=skip_first)
         # Get parameters for reparametrization
         (z_mean, z_logvar) = self.toZ(hE)
         return z_mean, z_logvar, hE, hidden_x
@@ -241,7 +244,7 @@ class AutoEncoder(ContinualLearner):
         eps = std.new(std.size()).normal_()#.requires_grad_()
         return eps.mul(std).add_(mu)
 
-    def decode(self, z, gate_input=None):
+    def decode(self, z, gate_input=None, skip_last=0):
         '''Decode latent variable activations.
 
         INPUT:  - [z]            <2D-tensor>; latent variables to be decoded
@@ -256,11 +259,12 @@ class AutoEncoder(ContinualLearner):
 
         # -put inputs through decoder
         hD = self.fromZ(z, gate_input=gate_input) if self.dg_gates else self.fromZ(z)
-        image_features = self.fcD(hD, gate_input=gate_input) if self.dg_gates else self.fcD(hD)
+        image_features = self.fcD(hD, gate_input=gate_input, skip_last=skip_last) if self.dg_gates \
+            else self.fcD(hD, skip_last=skip_last)
         image_recon = self.convD(self.to_image(image_features))
         return image_recon
 
-    def forward(self, x, gate_input=None, full=False, reparameterize=True, **kwargs):
+    def forward(self, x, gate_input=None, full=False, reparameterize=True, skip_first=0, skip_last=0, **kwargs):
         '''Forward function to propagate [x] through the encoder, reparametrization and decoder.
 
         Input: - [x]          <4D-tensor> of shape [batch_size]x[channels]x[image_size]x[image_size]
@@ -277,10 +281,10 @@ class AutoEncoder(ContinualLearner):
         If [full] is False, output is simply the predicted logits (i.e., [y_hat]).'''
         if full:
             # -encode (forward), reparameterize and decode (backward)
-            mu, logvar, hE, hidden_x = self.encode(x)
+            mu, logvar, hE, hidden_x = self.encode(x, skip_first=skip_first)
             z = self.reparameterize(mu, logvar) if reparameterize else mu
             gate_input = gate_input if self.dg_gates else None
-            x_recon = self.decode(z, gate_input=gate_input)
+            x_recon = self.decode(z, gate_input=gate_input, skip_last=skip_last)
             # -classify
             if hasattr(self, "classifier"):
                 if self.classify_opt in ["beforeZ", "fromZ"]:
@@ -387,7 +391,7 @@ class AutoEncoder(ContinualLearner):
 
         # decode z into image X
         with torch.no_grad():
-            X = self.decode(z, gate_input=(task_used if self.dg_type=="task" else y_used) if self.dg_gates else None)
+            X = self.decode(z, gate_input=(task_used if self.dg_type=="task" else y_used) if self.dg_gates else None, skip_last=self.fc_latent_layer)
 
         # return samples as [batch_size]x[channels]x[image_size]x[image_size] tensor, plus requested additional info
         return X if only_x else (X, y_used, task_used)
@@ -758,6 +762,7 @@ class AutoEncoder(ContinualLearner):
 
             # Run the model
             x = self.convE(x) if self.hidden else x   # -pre-processing (if 'hidden')
+            x = self.fcE(x, skip_last=self.fc_latent_layer)
             recon_batch, y_hat, mu, logvar, z = self(
                 x, gate_input=(task_tensor if self.dg_type=="task" else y) if self.dg_gates else None, full=True,
                 reparameterize=True
@@ -824,7 +829,7 @@ class AutoEncoder(ContinualLearner):
                 x_temp_ = self.convE(x_) if self.hidden and replay_not_hidden else x_
                 # -run full model
                 gate_input = (tasks_ if self.dg_type=="task" else y_predicted) if self.dg_gates else None
-                recon_batch, y_hat_all, mu, logvar, z = self(x_temp_, gate_input=gate_input, full=True)
+                recon_batch, y_hat_all, mu, logvar, z = self(x_temp_, gate_input=gate_input, full=True, skip_first=self.fc_latent_layer, skip_last=self.fc_latent_layer)
 
             # Loop to perform each replay
             for replay_id in range(n_replays):
