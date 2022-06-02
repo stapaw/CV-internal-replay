@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import random
 import numpy as np
 import os
@@ -363,11 +364,17 @@ def run(args, verbose=False):
             args.tasks*classes_per_task if args.scenario=="class" else args.tasks,
             "classes" if args.scenario=="class" else "tasks", average_accs
         ))
-    # -write out to text file
-    output_file = open("{}/acc-{}.txt".format(args.r_dir, param_stamp), 'w')
-    output_file.write('{}\n'.format(average_accs))
-    output_file.close()
 
+    results_dict = {"training": progress_dict,
+                    "test": {
+                        "accs": accs,
+                        "average_acc": average_accs
+                    },
+                    "args": args.__dict__}
+    # -write out to text file
+    output_path = "{}/acc-{}.json".format(args.r_dir, param_stamp)
+    with open(output_path, "w+") as f:
+        json.dump(results_dict, f, indent=2)
 
     #-------------------------------------------------------------------------------------------------#
 
