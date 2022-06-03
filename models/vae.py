@@ -762,7 +762,8 @@ class AutoEncoder(ContinualLearner):
 
             # Run the model
             x = self.convE(x) if self.hidden else x   # -pre-processing (if 'hidden')
-            x = self.fcE(x, skip_last=self.fc_latent_layer)
+            x = self.flatten(x)
+            #x = self.fcE(x, skip_first=self.fc_latent_layer)
             recon_batch, y_hat, mu, logvar, z = self(
                 x, gate_input=(task_tensor if self.dg_type=="task" else y) if self.dg_gates else None, full=True,
                 reparameterize=True
