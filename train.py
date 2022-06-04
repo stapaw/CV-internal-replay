@@ -340,7 +340,9 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
             if generator is not None and batch_index <= iters_gen:
                 if utils.checkattr(args, "hidden"):
                     with torch.no_grad():
-                        x_enc = model(x, skip_last=args.fc_latent_layer, hidden=True)
+                        x_enc = model(x, skip_last=args.fc_lay-args.fc_latent_layer-1, hidden=True)
+                        # encoded X should have dimensionality fitting latent layer
+                        assert x_enc.shape[-1] == getattr(generator.fcE, "fcLayer{}".format(args.fc_latent_layer+1)).linear.in_features
                 else:
                     x_enc = x
                 loss_dict = generator.train_a_batch(x_enc, y=y, x_=x_, y_=y_, scores_=scores_,

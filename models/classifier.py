@@ -182,6 +182,9 @@ class Classifier(ContinualLearner):
         ##--(2)-- REPLAYED DATA --##
 
         if x_ is not None:
+            if self.hidden:
+                assert x_.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer + 1)).linear.in_features
+
             # In the Task-IL scenario, [y_] or [scores_] is a list and [x_] needs to be evaluated on each of them
             TaskIL = (type(y_)==list) if (y_ is not None) else (type(scores_)==list)
             if not TaskIL:

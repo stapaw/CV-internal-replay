@@ -390,7 +390,8 @@ def run(args, verbose=False):
         gen_model.eval()
 
         # Evaluate log-likelihood of generative model on combined test-set (with S=100 importance samples per datapoint)
-        ll_per_datapoint = gen_model.estimate_loglikelihood(test_set, S=100, batch_size=args.batch)
+        ll_per_datapoint = gen_model.estimate_loglikelihood(test_set, S=100, batch_size=args.batch,
+                                                            classifier=model if utils.checkattr(args, "hidden") else None)
         if verbose:
             print('=> Log-likelihood on test set: {:.4f} +/- {:.4f}\n'.format(
                 np.mean(ll_per_datapoint), np.sqrt(np.var(ll_per_datapoint))

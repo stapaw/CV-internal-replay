@@ -646,7 +646,7 @@ class AutoEncoder(ContinualLearner):
         return all_res.cpu().numpy()
 
 
-    def estimate_loglikelihood(self, dataset, S=5000, batch_size=128, max_n=None):
+    def estimate_loglikelihood(self, dataset, S=5000, batch_size=128, max_n=None, classifier=None):
         '''Estimate average marginal log-likelihood for x|y of the model on [dataset] using [S] importance samples.'''
 
         # This function currently does not (always) work for Task-IL scenario or for decoder-gates with [dg_type]="task"
@@ -673,11 +673,15 @@ class AutoEncoder(ContinualLearner):
             # If hidden replay, convert inputs to hidden feature representations
             if self.hidden:
                 with torch.no_grad():
-                    x = self.input_to_hidden(x)
+                    if classifier is not None:
+                        x = classifier(x, skip_last=self.fc_layers-self.fc_latent_layer-1, hidden=True)
+                        assert x.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer+1)).linear.in_features
+                    else:
+                        x = self.convE(x)
 
             # Run forward pass of model to get [z_mu] and [z_logvar]
             with torch.no_grad():
-                z_mu, z_logvar, _, _ = self.encode(x)
+                z_mu, z_logvar, _, _ = self.encode(x, skip_first=self.fc_latent_layer)
 
             # Importance samples will be calcualted in batches, get number of required batches
             repeats = int(np.ceil(S / batch_size))
@@ -700,7 +704,8 @@ class AutoEncoder(ContinualLearner):
                 # -reconstruct input
                 gate_input = y.expand(batch_size_current) if self.dg_gates else None
                 with torch.no_grad():
-                    x_recon = self.decode(z, gate_input=gate_input)
+                    x_recon = self.decode(z, gate_input=gate_input, skip_last=self.fc_latent_layer)
+                    assert x_recon.shape[1] == x.shape[1]
                 # -calculate p_x_z (under Gaussian observation model with unit variance)
                 log_p_x_z = lf.log_Normal_standard(x=x, mean=x_recon, average=False, dim=-1)
 
@@ -762,14 +767,26 @@ class AutoEncoder(ContinualLearner):
             if self.dg_gates and self.dg_type=="task":
                 task_tensor = torch.tensor(np.repeat(task-1, x.size(0))).to(self._device())
 
+            if self.hidden and x_ is not None:
+                # When running latent replay, both features encoded by classifier from real data
+                # and features from previous generator should have the same dimensionality
+                assert x.shape == x_.shape
+
             # Run the model
-            x = self.flatten(x)
-            #x = self.fcE(x, skip_first=self.fc_latent_layer)
-            skip_layers = self.fc_layers - self.fc_latent_layer - 1 if self.hidden else 0
+            if self.hidden:
+                x = self.flatten(x)
+            # compute number of layers to skip when running latent replay
+            skip_layers = self.fc_latent_layer if self.hidden else 0
+
             recon_batch, y_hat, mu, logvar, z = self(
                 x, gate_input=(task_tensor if self.dg_type=="task" else y) if self.dg_gates else None, full=True,
                 reparameterize=True, skip_first=skip_layers, skip_last=skip_layers
             )
+            if self.hidden:
+                assert recon_batch.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer+1)).linear.in_features
+                assert recon_batch.shape[1] == getattr(self.fcD, "fcLayer{}".format(self.fc_layers - 1 - self.fc_latent_layer)).linear.out_features
+                assert recon_batch.shape[1] == x.shape[1]
+
             # -if needed ("class"/"task"-scenario), find allowed classes for current task & remove predictions of others
             if active_classes is not None:
                 class_entries = active_classes[-1] if type(active_classes[0])==list else active_classes
@@ -833,6 +850,11 @@ class AutoEncoder(ContinualLearner):
                 # -run full model
                 gate_input = (tasks_ if self.dg_type=="task" else y_predicted) if self.dg_gates else None
                 recon_batch, y_hat_all, mu, logvar, z = self(x_temp_, gate_input=gate_input, full=True, skip_first=self.fc_latent_layer, skip_last=self.fc_latent_layer)
+
+                if self.hidden:
+                    assert recon_batch.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer + 1)).linear.in_features
+                    assert recon_batch.shape[1] == getattr(self.fcD, "fcLayer{}".format(self.fc_layers - 1 - self.fc_latent_layer)).linear.out_features
+                    assert recon_batch.shape[1] == x_temp_.shape[1]
 
             # Loop to perform each replay
             for replay_id in range(n_replays):

@@ -1,3 +1,4 @@
+import utils
 from data.load import get_multitask_experiment
 from utils import checkattr
 
@@ -97,7 +98,7 @@ def get_param_stamp(args, model_name, verbose=True, replay=False, replay_model_n
 
     # -for replay
     if replay:
-        replay_stamp = "{H}{rep}{bat}{distil}{model}{gi}".format(
+        replay_stamp = "{H}{rep}{bat}{distil}{model}{gi}{fll}".format(
             H="" if not args.replay=="generative" else (
                 "H" if (checkattr(args, "hidden") and hasattr(args, 'depth') and args.depth>0) else ""
             ),
@@ -110,6 +111,7 @@ def get_param_stamp(args, model_name, verbose=True, replay=False, replay_model_n
             gi="-gi{}".format(args.g_iters) if (
                 hasattr(args, "g_iters") and (replay_model_name is not None) and (not args.iters==args.g_iters)
             ) else "",
+            fll="-fll{}".format(args.fc_latent_layer) if utils.checkattr(args, "hidden") else ""
         )
         if verbose:
             print(" --> replay:        " + replay_stamp)
