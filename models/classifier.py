@@ -58,7 +58,7 @@ class Classifier(ContinualLearner):
         elif fc_layers==2:
             self.fc_layer_sizes = [self.conv_out_units, h_dim]
         else:
-            self.fc_layer_sizes = [self.conv_out_units]+[300,400,500]
+            self.fc_layer_sizes = [self.conv_out_units]+[int(x) for x in np.linspace(fc_units, h_dim, num=fc_layers-1)]
         self.units_before_classifier = h_dim if fc_layers>1 else self.conv_out_units
         #------------------------------------------------------------------------------------------#
         #--> fully connected layers

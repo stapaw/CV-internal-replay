@@ -100,7 +100,7 @@ class AutoEncoder(ContinualLearner):
         elif fc_layers==2:
             self.fc_layer_sizes = [self.conv_out_units, h_dim]
         else:
-            self.fc_layer_sizes = [self.conv_out_units]+[300,400,500]
+            self.fc_layer_sizes = [self.conv_out_units]+[int(x) for x in np.linspace(fc_units, h_dim, num=fc_layers-1)]
         real_h_dim = h_dim if fc_layers>1 else self.conv_out_units
         #------------------------------------------------------------------------------------------#
         self.fcE = MLP(size_per_layer=self.fc_layer_sizes, drop=fc_drop, batch_norm=fc_bn, nl=fc_nl,
