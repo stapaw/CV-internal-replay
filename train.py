@@ -338,7 +338,12 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
 
             #---> Train GENERATOR
             if generator is not None and batch_index <= iters_gen:
-                loss_dict = generator.train_a_batch(x, y=y, x_=x_, y_=y_, scores_=scores_,
+                if utils.checkattr(args, "hidden"):
+                    with torch.no_grad():
+                        x_enc = model(x, skip_last=args.fc_latent_layer, hidden=True)
+                else:
+                    x_enc = x
+                loss_dict = generator.train_a_batch(x_enc, y=y, x_=x_, y_=y_, scores_=scores_,
                                                     tasks_=task_used, active_classes=active_classes, rnt=(
                                                         1. if task==1 else 1./task
                                                     ) if rnt is None else rnt, task=task,

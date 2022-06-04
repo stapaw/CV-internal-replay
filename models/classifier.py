@@ -58,7 +58,7 @@ class Classifier(ContinualLearner):
         elif fc_layers==2:
             self.fc_layer_sizes = [self.conv_out_units, h_dim]
         else:
-            self.fc_layer_sizes = [self.conv_out_units]+[int(x) for x in np.linspace(fc_units, h_dim, num=fc_layers-1)]
+            self.fc_layer_sizes = [self.conv_out_units]+[300,400,500]
         self.units_before_classifier = h_dim if fc_layers>1 else self.conv_out_units
         #------------------------------------------------------------------------------------------#
         #--> fully connected layers
@@ -90,10 +90,14 @@ class Classifier(ContinualLearner):
                                       self.classes)
 
 
-    def forward(self, x):
+    def forward(self, x, skip_first=0, skip_last=0, hidden=False):
         hidden_rep = self.convE(x)
-        final_features = self.fcE(self.flatten(hidden_rep))
-        return self.classifier(final_features)
+        if not hidden:
+            final_features = self.fcE(self.flatten(hidden_rep))
+            return self.classifier(final_features)
+        else:
+            final_features = self.fcE(self.flatten(hidden_rep), skip_first=skip_first, skip_last=skip_last)
+            return final_features
 
     def input_to_hidden(self, x):
         '''Get [hidden_rep]s (inputs to final fully-connected layers) for images [x].'''

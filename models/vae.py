@@ -3,6 +3,8 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+
+import utils
 from models.utils import loss_functions as lf, modules
 from models.conv.nets import ConvLayers,DeconvLayers
 from models.fc.nets import MLP, MLP_gates
@@ -98,7 +100,7 @@ class AutoEncoder(ContinualLearner):
         elif fc_layers==2:
             self.fc_layer_sizes = [self.conv_out_units, h_dim]
         else:
-            self.fc_layer_sizes = [self.conv_out_units]+[int(x) for x in np.linspace(fc_units, h_dim, num=fc_layers-1)]
+            self.fc_layer_sizes = [self.conv_out_units]+[300,400,500]
         real_h_dim = h_dim if fc_layers>1 else self.conv_out_units
         #------------------------------------------------------------------------------------------#
         self.fcE = MLP(size_per_layer=self.fc_layer_sizes, drop=fc_drop, batch_norm=fc_bn, nl=fc_nl,
@@ -212,14 +214,14 @@ class AutoEncoder(ContinualLearner):
 
     ##------ FORWARD FUNCTIONS --------##
 
-    def encode(self, x, not_hidden=False, skip_first=0):
+    def encode(self, x, not_hidden=False, skip_first=0, skip_last=0):
         '''Pass input through feed-forward connections, to get [z_mean], [z_logvar] and [hE].
         Input [x] is either an image or, if [self.hidden], extracted "intermediate" or "internal" image features.'''
         # Forward-pass through conv-layers
         hidden_x = x if (self.hidden and not not_hidden) else self.convE(x)
         image_features = self.flatten(hidden_x)
         # Forward-pass through fc-layers
-        hE = self.fcE(image_features, skip_first=skip_first)
+        hE = self.fcE(image_features, skip_first=skip_first, skip_last=skip_last)
         # Get parameters for reparametrization
         (z_mean, z_logvar) = self.toZ(hE)
         return z_mean, z_logvar, hE, hidden_x
@@ -761,12 +763,12 @@ class AutoEncoder(ContinualLearner):
                 task_tensor = torch.tensor(np.repeat(task-1, x.size(0))).to(self._device())
 
             # Run the model
-            x = self.convE(x) if self.hidden else x   # -pre-processing (if 'hidden')
             x = self.flatten(x)
             #x = self.fcE(x, skip_first=self.fc_latent_layer)
+            skip_layers = self.fc_layers - self.fc_latent_layer - 1 if self.hidden else 0
             recon_batch, y_hat, mu, logvar, z = self(
                 x, gate_input=(task_tensor if self.dg_type=="task" else y) if self.dg_gates else None, full=True,
-                reparameterize=True
+                reparameterize=True, skip_first=skip_layers, skip_last=skip_layers
             )
             # -if needed ("class"/"task"-scenario), find allowed classes for current task & remove predictions of others
             if active_classes is not None:
