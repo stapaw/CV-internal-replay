@@ -93,7 +93,7 @@ def define_classifier(args, config, device):
             fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl, excit_buffer=True,
             # -training-specific components
             hidden=checkattr(args, 'hidden'),
-            fc_latent_layer=args.fc_latent_layer
+            fc_latent_layer=args.fc_latent_layer if utils.checkattr(args, "fc_latent_layer") else 0
         ).to(device)
     else:
         model = Classifier(
