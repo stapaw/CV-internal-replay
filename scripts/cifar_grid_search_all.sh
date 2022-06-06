@@ -1,13 +1,12 @@
 #!/bin/bash
 
-FC_LAYERS=3
-HIDDEN_NEURONS=2000
-BATCH_REPLAY=256
+FC_LAYERS=4
+HIDDEN_NEURONS=1000
 ITERS=5000
 EPOCHS=100
 
 # Other batch-replay size
-BATCH_REPLAY=512
+BATCH_REPLAY=256
 MODEL_TAG=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_${BATCH_REPLAY}br_proper
 
 ./main_pretrain.py \
@@ -93,3 +92,4 @@ FC_LATENT_LAYER=2
   --convE-ltag=${MODEL_TAG} \
   --hidden \
   --fc-latent-layer=${FC_LATENT_LAYER}
+
