@@ -608,99 +608,99 @@ def run(args, verbose=False):
         pretrained_classifier.eval()
 
         # Only continue with computing these measures if the requested classifier network (using --eval-tag) was found
-        if FileFound:
-            # Preparations
-            total_n = len(test_set)
-            n_repeats = int(np.ceil(total_n / args.batch))
-            # -sample data from generator (for IS, FID and Precision & Recall)
-            gen_x = gen_model.sample(size=total_n, only_x=True)
-            # -generate predictions for generated data (for IS)
-            gen_pred = []
-            for i in range(n_repeats):
-                x = gen_x[(i * args.batch) : int(min(((i + 1) * args.batch), total_n))]
-                with torch.no_grad():
-                    gen_pred.append(
-                        F.softmax(
-                            pretrained_classifier.hidden_to_output(x)
-                            if args.hidden
-                            else pretrained_classifier(x),
-                            dim=1,
-                        )
-                        .cpu()
-                        .numpy()
-                    )
-            gen_pred = np.concatenate(gen_pred)
-            # -generate embeddings for generated data (for FID and Precision & Recall)
-            gen_emb = []
-            for i in range(n_repeats):
-                with torch.no_grad():
-                    gen_emb.append(
-                        pretrained_classifier.feature_extractor(
-                            gen_x[
-                                (i * args.batch) : int(
-                                    min(((i + 1) * args.batch), total_n)
-                                )
-                            ],
-                            from_hidden=args.hidden,
-                        )
-                        .cpu()
-                        .numpy()
-                    )
-            gen_emb = np.concatenate(gen_emb)
-            # -generate embeddings for test data (for FID and Precision & Recall)
-            data_loader = utils.get_data_loader(
-                test_set, batch_size=args.batch, cuda=cuda
-            )
-            real_emb = []
-            for real_x, _ in data_loader:
-                with torch.no_grad():
-                    real_emb.append(
-                        pretrained_classifier.feature_extractor(real_x.to(device))
-                        .cpu()
-                        .numpy()
-                    )
-            real_emb = np.concatenate(real_emb)
-
-            # Calculate "Inception Score" (IS)
-            py = gen_pred.mean(axis=0)
-            is_per_datapoint = []
-            for i in range(len(gen_pred)):
-                pyx = gen_pred[i, :]
-                is_per_datapoint.append(entropy(pyx, py))
-            IS = np.exp(np.mean(is_per_datapoint))
-            if verbose:
-                print("=> Inception Score = {:.4f}\n".format(IS))
-            # -write out to text file
-            output_file = open(
-                "{}/is{}-{}.txt".format(args.r_dir, eval_tag, param_stamp), "w"
-            )
-            output_file.write("{}\n".format(IS))
-            output_file.close()
-
-            ## Calculate "Frechet Inception Distance" (FID)
-            FID = fid.calculate_fid_from_embedding(gen_emb, real_emb)
-            if verbose:
-                print("=> Frechet Inception Distance = {:.4f}\n".format(FID))
-            # -write out to text file
-            output_file = open(
-                "{}/fid{}-{}.txt".format(args.r_dir, eval_tag, param_stamp), "w"
-            )
-            output_file.write("{}\n".format(FID))
-            output_file.close()
-
-            # Calculate "Precision & Recall"-curves
-            precision, recall = pr.compute_prd_from_embedding(gen_emb, real_emb)
-            # -write out to text files
-            file_name = "{}/precision{}-{}.txt".format(
-                args.r_dir, eval_tag, param_stamp
-            )
-            with open(file_name, "w") as f:
-                for item in precision:
-                    f.write("%s\n" % item)
-            file_name = "{}/recall{}-{}.txt".format(args.r_dir, eval_tag, param_stamp)
-            with open(file_name, "w") as f:
-                for item in recall:
-                    f.write("%s\n" % item)
+        # if FileFound:
+        #     # Preparations
+        #     total_n = len(test_set)
+        #     n_repeats = int(np.ceil(total_n / args.batch))
+        #     # -sample data from generator (for IS, FID and Precision & Recall)
+        #     gen_x = gen_model.sample(size=total_n, only_x=True)
+        #     # -generate predictions for generated data (for IS)
+        #     gen_pred = []
+        #     for i in range(n_repeats):
+        #         x = gen_x[(i * args.batch) : int(min(((i + 1) * args.batch), total_n))]
+        #         with torch.no_grad():
+        #             gen_pred.append(
+        #                 F.softmax(
+        #                     pretrained_classifier.hidden_to_output(x)
+        #                     if args.hidden
+        #                     else pretrained_classifier(x),
+        #                     dim=1,
+        #                 )
+        #                 .cpu()
+        #                 .numpy()
+        #             )
+        #     gen_pred = np.concatenate(gen_pred)
+        #     # -generate embeddings for generated data (for FID and Precision & Recall)
+        #     gen_emb = []
+        #     for i in range(n_repeats):
+        #         with torch.no_grad():
+        #             gen_emb.append(
+        #                 pretrained_classifier.feature_extractor(
+        #                     gen_x[
+        #                         (i * args.batch) : int(
+        #                             min(((i + 1) * args.batch), total_n)
+        #                         )
+        #                     ],
+        #                     from_hidden=args.hidden,
+        #                 )
+        #                 .cpu()
+        #                 .numpy()
+        #             )
+        #     gen_emb = np.concatenate(gen_emb)
+        #     # -generate embeddings for test data (for FID and Precision & Recall)
+        #     data_loader = utils.get_data_loader(
+        #         test_set, batch_size=args.batch, cuda=cuda
+        #     )
+        #     real_emb = []
+        #     for real_x, _ in data_loader:
+        #         with torch.no_grad():
+        #             real_emb.append(
+        #                 pretrained_classifier.feature_extractor(real_x.to(device))
+        #                 .cpu()
+        #                 .numpy()
+        #             )
+        #     real_emb = np.concatenate(real_emb)
+        #
+        #     # Calculate "Inception Score" (IS)
+        #     py = gen_pred.mean(axis=0)
+        #     is_per_datapoint = []
+        #     for i in range(len(gen_pred)):
+        #         pyx = gen_pred[i, :]
+        #         is_per_datapoint.append(entropy(pyx, py))
+        #     IS = np.exp(np.mean(is_per_datapoint))
+        #     if verbose:
+        #         print("=> Inception Score = {:.4f}\n".format(IS))
+        #     # -write out to text file
+        #     output_file = open(
+        #         "{}/is{}-{}.txt".format(args.r_dir, eval_tag, param_stamp), "w"
+        #     )
+        #     output_file.write("{}\n".format(IS))
+        #     output_file.close()
+        #
+        #     ## Calculate "Frechet Inception Distance" (FID)
+        #     FID = fid.calculate_fid_from_embedding(gen_emb, real_emb)
+        #     if verbose:
+        #         print("=> Frechet Inception Distance = {:.4f}\n".format(FID))
+        #     # -write out to text file
+        #     output_file = open(
+        #         "{}/fid{}-{}.txt".format(args.r_dir, eval_tag, param_stamp), "w"
+        #     )
+        #     output_file.write("{}\n".format(FID))
+        #     output_file.close()
+        #
+        #     # Calculate "Precision & Recall"-curves
+        #     precision, recall = pr.compute_prd_from_embedding(gen_emb, real_emb)
+        #     # -write out to text files
+        #     file_name = "{}/precision{}-{}.txt".format(
+        #         args.r_dir, eval_tag, param_stamp
+        #     )
+        #     with open(file_name, "w") as f:
+        #         for item in precision:
+        #             f.write("%s\n" % item)
+        #     file_name = "{}/recall{}-{}.txt".format(args.r_dir, eval_tag, param_stamp)
+        #     with open(file_name, "w") as f:
+        #         for item in recall:
+        #             f.write("%s\n" % item)
 
     results_dict = {
         "training": progress_dict,
@@ -786,14 +786,14 @@ def run(args, verbose=False):
             )
 
         # -plot "Precision & Recall"-curve
-        if (
-            gen_eval
-            and args.experiment in ["CIFAR100", "fruits360"]
-            and args.scenario == "class"
-            and FileFound
-        ):
-            figure = evaluate.visual.plt.plot_pr_curves([[precision]], [[recall]])
-            pp.savefig(figure)
+        # if (
+        #     gen_eval
+        #     and args.experiment in ["CIFAR100", "fruits360"]
+        #     and args.scenario == "class"
+        #     and FileFound
+        # ):
+        #     figure = evaluate.visual.plt.plot_pr_curves([[precision]], [[recall]])
+        #     pp.savefig(figure)
 
         # -close pdf
         pp.close()

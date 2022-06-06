@@ -782,10 +782,10 @@ class AutoEncoder(ContinualLearner):
                 x, gate_input=(task_tensor if self.dg_type=="task" else y) if self.dg_gates else None, full=True,
                 reparameterize=True, skip_first=skip_layers, skip_last=skip_layers
             )
-            if self.hidden:
-                assert recon_batch.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer+1)).linear.in_features
-                assert recon_batch.shape[1] == getattr(self.fcD, "fcLayer{}".format(self.fc_layers - 1 - self.fc_latent_layer)).linear.out_features
-                assert recon_batch.shape[1] == x.shape[1]
+            # if self.hidden:
+            #     assert recon_batch.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer+1)).linear.in_features
+            #     assert recon_batch.shape[1] == getattr(self.fcD, "fcLayer{}".format(self.fc_layers - 1 - self.fc_latent_layer)).linear.out_features
+            #     assert recon_batch.shape[1] == x.shape[1]
 
             # -if needed ("class"/"task"-scenario), find allowed classes for current task & remove predictions of others
             if active_classes is not None:
