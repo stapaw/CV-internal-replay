@@ -770,7 +770,7 @@ class AutoEncoder(ContinualLearner):
             if self.hidden and x_ is not None and self.fc_latent_layer!=0:
                 # When running latent replay, both features encoded by classifier from real data
                 # and features from previous generator should have the same dimensionality
-                assert x.shape == x_.shape
+                assert x.shape[1:] == x_.shape[1:], "Shapes mismatch: x.shape[1:] == x_.shape[1:] is {} == {}".format(x.shape[1:], x_.shape[1:])
 
             # Run the model
             if self.hidden:
