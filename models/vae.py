@@ -675,7 +675,7 @@ class AutoEncoder(ContinualLearner):
                 with torch.no_grad():
                     if classifier is not None:
                         x = classifier(x, skip_last=self.fc_layers-self.fc_latent_layer-1, hidden=True)
-                        assert x.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer+1)).linear.in_features
+                        # assert x.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer+1)).linear.in_features
                     else:
                         x = self.convE(x)
 
@@ -767,7 +767,7 @@ class AutoEncoder(ContinualLearner):
             if self.dg_gates and self.dg_type=="task":
                 task_tensor = torch.tensor(np.repeat(task-1, x.size(0))).to(self._device())
 
-            if self.hidden and x_ is not None:
+            if self.hidden and x_ is not None and self.fc_latent_layer!=0:
                 # When running latent replay, both features encoded by classifier from real data
                 # and features from previous generator should have the same dimensionality
                 assert x.shape == x_.shape
@@ -851,10 +851,10 @@ class AutoEncoder(ContinualLearner):
                 gate_input = (tasks_ if self.dg_type=="task" else y_predicted) if self.dg_gates else None
                 recon_batch, y_hat_all, mu, logvar, z = self(x_temp_, gate_input=gate_input, full=True, skip_first=self.fc_latent_layer, skip_last=self.fc_latent_layer)
 
-                if self.hidden:
-                    assert recon_batch.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer + 1)).linear.in_features
-                    assert recon_batch.shape[1] == getattr(self.fcD, "fcLayer{}".format(self.fc_layers - 1 - self.fc_latent_layer)).linear.out_features
-                    assert recon_batch.shape[1] == x_temp_.shape[1]
+                # if self.hidden:
+                #     assert recon_batch.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer + 1)).linear.in_features
+                #     assert recon_batch.shape[1] == getattr(self.fcD, "fcLayer{}".format(self.fc_layers - 1 - self.fc_latent_layer)).linear.out_features
+                #     assert recon_batch.shape[1] == x_temp_.shape[1]
 
             # Loop to perform each replay
             for replay_id in range(n_replays):
