@@ -714,7 +714,10 @@ def run(args, verbose=False):
     }
 
     # -write out to text file
-    output_path = "{}/acc-{}.json".format(args.r_dir, param_stamp)
+    # create folder for results for model if not exists
+    folder_path = os.path.join(args.r_dir, args.convE_ltag)
+    os.makedirs(folder_path, exist_ok=True)
+    output_path = "{}/acc-{}.json".format(folder_path, param_stamp)
     with open(output_path, "w+") as f:
         json.dump(results_dict, f, indent=2)
 
