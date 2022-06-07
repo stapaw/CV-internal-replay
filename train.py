@@ -100,6 +100,13 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
     # Loop over all tasks.
     for task, train_dataset in enumerate(train_datasets, 1):
 
+        # If we do latent replay and `freeze_latent_encoder` is set, disable weight updates
+        # in classifier after fist task
+        if task > 1 and args.hidden and args.freeze_latent_encoder:
+            for layer_id in range(args.fc_latent_layer):
+                for param in getattr(model.fcE, "fcLayer{}".format(layer_id+1)).parameters():
+                    param.requires_grad = False
+
         # If offline replay-setting, create large database of all tasks so far
         if replay_mode=="offline" and (not scenario=="task"):
             train_dataset = ConcatDataset(train_datasets[:task])
