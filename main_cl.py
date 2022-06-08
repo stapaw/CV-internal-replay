@@ -716,8 +716,12 @@ def run(args, verbose=False):
     # -write out to text file
     # create folder for results for model if not exists
     folder_path = os.path.join(args.r_dir, args.convE_ltag)
+    if not args.hidden:
+        folder_path+='classic_generative'
     os.makedirs(folder_path, exist_ok=True)
     output_path = "{}/acc-{}.json".format(folder_path, param_stamp)
+    print("Saving results to {}".format(output_path))
+
     with open(output_path, "w+") as f:
         json.dump(results_dict, f, indent=2)
 
