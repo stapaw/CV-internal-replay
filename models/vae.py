@@ -737,6 +737,8 @@ class AutoEncoder(ContinualLearner):
         # Set model to training-mode
         self.train()
         if freeze_convE:
+            for param in self.convE.parameters():
+                param.requires_grad = False
             # - if conv-layers are frozen, they shoud be set to eval() to prevent batch-norm layers from changing
             self.convE.eval()
 
