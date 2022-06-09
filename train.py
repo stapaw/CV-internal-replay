@@ -285,7 +285,14 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
 
             #---> Train MAIN MODEL
             if batch_index <= iters_main:
-
+                
+                if task > 1:                        
+                    
+                    freeze_convE=True
+                    for param in model.convE.parameters():
+                        param.requires_grad = False
+                        
+                    
                 #Train the main model with this batch (if generator exists use generations from VAE)
                 if generator is not None and not args.hidden:
                     x_cls, _, _, _, _ = generator.forward(x, full=True)
@@ -339,6 +346,11 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
             #---> Train GENERATOR
             if generator is not None and batch_index <= iters_gen:
 
+                if task > 1:
+                    freeze_convE=True
+                    for param in generator.convE.parameters():
+                        param.requires_grad = False
+                        
                 loss_dict = generator.train_a_batch(x, y=y, x_=x_, y_=y_, scores_=scores_,
                                                     tasks_=task_used, active_classes=active_classes, rnt=(
                                                         1. if task==1 else 1./task
