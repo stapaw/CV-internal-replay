@@ -1,3 +1,5 @@
+from math import ceil
+
 import numpy as np
 import torch
 from torch.nn import functional as F
@@ -19,7 +21,7 @@ class Classifier(ContinualLearner):
                  fc_layers=3, fc_units=1000, h_dim=400, fc_drop=0, fc_bn=True, fc_nl="relu", fc_gated=False,
                  bias=True, excitability=False, excit_buffer=False,
                  # -training-specific settings (can be changed after setting up model)
-                 hidden=False, fc_latent_layer=0):
+                 hidden=False, latent=False, latent_replay_layer_frequency=None):
 
         # model configurations
         super().__init__()
@@ -31,6 +33,9 @@ class Classifier(ContinualLearner):
 
         # settings for training
         self.hidden = hidden
+        self.latent = latent
+        self.latent_replay_layer_frequency = latent_replay_layer_frequency
+
         #--> if True, [self.classify] & replayed data of [self.train_a_batch] expected to be "hidden data"
 
         # optimizer (needs to be set before training starts))
@@ -67,8 +72,6 @@ class Classifier(ContinualLearner):
         #--> classifier
         self.classifier = fc_layer(self.units_before_classifier, classes, excit_buffer=True, nl='none', drop=fc_drop)
 
-        self.fc_latent_layer = fc_latent_layer
-
     def list_init_layers(self):
         '''Return list of modules whose parameters could be initialized differently (i.e., conv- or fc-layers).'''
         list = self.convE.list_init_layers()
@@ -90,14 +93,18 @@ class Classifier(ContinualLearner):
                                       self.classes)
 
 
-    def forward(self, x, skip_first=0, skip_last=0, hidden=False):
+    def forward(self, x, return_internal=False, return_intermediate=False):
         hidden_rep = self.convE(x)
-        if not hidden:
-            final_features = self.fcE(self.flatten(hidden_rep))
-            return self.classifier(final_features)
+        hidden_rep = self.flatten(hidden_rep)
+        if return_internal and not return_intermediate:
+            return hidden_rep
         else:
-            final_features = self.fcE(self.flatten(hidden_rep), skip_first=skip_first, skip_last=skip_last)
-            return final_features
+            if return_intermediate:
+                _, final_features, _ = self.fcE(hidden_rep, return_lists=return_intermediate)
+                return [hidden_rep] + final_features
+            else:
+                final_features = self.fcE(self.flatten(hidden_rep))
+                return self.classifier(final_features)
 
     def input_to_hidden(self, x):
         '''Get [hidden_rep]s (inputs to final fully-connected layers) for images [x].'''
@@ -111,11 +118,24 @@ class Classifier(ContinualLearner):
         return self.fcE(self.flatten(images if from_hidden else self.convE(images)))
         #return self.classifier(self.fcE(self.flatten(images if from_hidden else self.convE(images))))
 
-    def classify(self, x, not_hidden=False, skip_first=0):
+    def classify(self, x, not_hidden=False, intermediate=False):
         '''For input [x] (image or extracted "intermediate" image features), return all predicted "scores"/"logits".'''
-        image_features = self.flatten(x) if (self.hidden and not not_hidden) else self.flatten(self.convE(x))
-        hE = self.fcE(image_features, skip_first=skip_first)
-        return self.classifier(hE)
+        if intermediate:
+            outputs = []
+            start = 0
+            batch_size = x[0].shape[0]
+            for skip_idx, features in enumerate(x[::-1]):
+                step = ceil(self.latent_replay_layer_frequency[skip_idx] * batch_size)
+                y = self.classifier(self.fcE(features[start:start+step,:], skip_first=skip_idx))
+                outputs.append(y)
+                start += step
+            out = torch.cat(outputs, dim=0)
+            assert out.shape[0] == x[0].shape[0]
+            return out
+        else:
+            image_features = self.flatten(x) if (self.hidden and not not_hidden) else self.flatten(self.convE(x))
+            hE = self.fcE(image_features)
+            return self.classifier(hE)
 
 
     def train_a_batch(self, x, y=None, x_=None, y_=None, scores_=None, rnt=0.5, active_classes=None,
@@ -199,18 +219,20 @@ class Classifier(ContinualLearner):
             distilL_r = [torch.tensor(0., device=self._device())]*n_replays
 
             # Run model (if [x_] is not a list with separate replay per task and there is no task-specific mask)
-            if (not type(x_)==list) and (self.mask_dict is None):
-                y_hat_all = self.classify(x_, not_hidden=replay_not_hidden, skip_first=self.fc_latent_layer)
+            if (not type(x_)==list or self.latent) and (self.mask_dict is None):
+                y_hat_all = self.classify(x_, not_hidden=replay_not_hidden, intermediate=self.latent)
 
             # Loop to perform each replay
             for replay_id in range(n_replays):
 
                 # -if [x_] is a list with separate replay per task, evaluate model on this task's replay
                 if (type(x_) == list) or (self.mask_dict is not None):
-                    x_temp_ = x_[replay_id] if type(x_) == list else x_
-                    if self.mask_dict is not None:
-                        self.apply_XdGmask(task=replay_id + 1)
-                    y_hat_all = self.classify(x_temp_, not_hidden=replay_not_hidden, skip_first=self.fc_latent_layer)
+                    # No idea what is this supposed to do but it surely breaks in case of latent updates
+                    if not self.latent:
+                        x_temp_ = x_[replay_id] if type(x_) == list else x_
+                        if self.mask_dict is not None:
+                            self.apply_XdGmask(task=replay_id + 1)
+                        y_hat_all = self.classify(x_temp_, not_hidden=replay_not_hidden, intermediate=self.latent)
 
                 # -if needed (e.g., "class" or "task" scenario), remove predictions for classes not in replayed task
                 y_hat = y_hat_all if (active_classes is None) else y_hat_all[:, active_classes[replay_id]]

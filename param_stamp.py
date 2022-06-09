@@ -207,8 +207,8 @@ def get_param_stamp(
                 and (not args.iters == args.g_iters)
             )
             else "",
-            fll="-fll{}".format(args.fc_latent_layer)
-            if utils.checkattr(args, "hidden")
+            fll="-lrlf[{}]".format(args.latent_replay_layer_frequency)
+            if utils.checkattr(args, "latent")
             else "",
         )
         if verbose:
