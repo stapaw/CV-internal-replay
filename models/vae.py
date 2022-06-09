@@ -138,14 +138,13 @@ class AutoEncoder(ContinualLearner):
                 gated=fc_gated, output=self.network_output if (self.depth==0 or self.hidden) else 'normal',
             )
         # to image-shape
-        self.to_image = modules.Reshape(image_channels=self.convE.out_channels if self.depth>0 else image_channels) \
-            if (not self.hidden) else modules.Identity()
+        self.to_image = modules.Reshape(image_channels=self.convE.out_channels if self.depth>0 else image_channels)
         # through deconv-layers
         self.convD = DeconvLayers(
             image_channels=image_channels, final_channels=start_channels, depth=self.depth,
             reducing_layers=reducing_layers, batch_norm=conv_bn, nl=conv_nl, gated=conv_gated,
             output=self.network_output, deconv_type=deconv_type,
-        ) if (not self.hidden) else modules.Identity()
+        )
 
         ##>----Prior----<##
         # -if using the GMM-prior, add its parameters
@@ -246,7 +245,7 @@ class AutoEncoder(ContinualLearner):
         eps = std.new(std.size()).normal_()#.requires_grad_()
         return eps.mul(std).add_(mu)
 
-    def decode(self, z, gate_input=None, skip_last=0):
+    def decode(self, z, return_hidden, gate_input=None, skip_last=0):
         '''Decode latent variable activations.
 
         INPUT:  - [z]            <2D-tensor>; latent variables to be decoded
@@ -261,10 +260,14 @@ class AutoEncoder(ContinualLearner):
 
         # -put inputs through decoder
         hD = self.fromZ(z, gate_input=gate_input) if self.dg_gates else self.fromZ(z)
-        image_features = self.fcD(hD, gate_input=gate_input, skip_last=skip_last) if self.dg_gates \
-            else self.fcD(hD, skip_last=skip_last)
-        image_recon = self.convD(self.to_image(image_features))
-        return image_recon
+
+        if return_hidden:
+            return hD
+        else:
+            image_features = self.fcD(hD, gate_input=gate_input, skip_last=skip_last) if self.dg_gates \
+                else self.fcD(hD, skip_last=skip_last)
+            image_recon = self.convD(self.to_image(image_features))
+            return image_recon
 
     def forward(self, x, gate_input=None, full=False, reparameterize=True, skip_first=0, skip_last=0, **kwargs):
         '''Forward function to propagate [x] through the encoder, reparametrization and decoder.
@@ -286,7 +289,7 @@ class AutoEncoder(ContinualLearner):
             mu, logvar, hE, hidden_x = self.encode(x, skip_first=skip_first)
             z = self.reparameterize(mu, logvar) if reparameterize else mu
             gate_input = gate_input if self.dg_gates else None
-            x_recon = self.decode(z, gate_input=gate_input, skip_last=skip_last)
+            x_recon = self.decode(z, return_hidden=self.hidden, gate_input=gate_input, skip_last=skip_last)
             # -classify
             if hasattr(self, "classifier"):
                 if self.classify_opt in ["beforeZ", "fromZ"]:
@@ -393,7 +396,8 @@ class AutoEncoder(ContinualLearner):
 
         # decode z into image X
         with torch.no_grad():
-            X = self.decode(z, gate_input=(task_used if self.dg_type=="task" else y_used) if self.dg_gates else None, skip_last=self.fc_latent_layer)
+            X = self.decode(z, gate_input=(task_used if self.dg_type=="task" else y_used) if self.dg_gates else None,
+                            return_hidden=self.hidden, skip_last=self.fc_latent_layer)
 
         # return samples as [batch_size]x[channels]x[image_size]x[image_size] tensor, plus requested additional info
         return X if only_x else (X, y_used, task_used)
@@ -634,7 +638,7 @@ class AutoEncoder(ContinualLearner):
             # Run backward pass of model to reconstruct input
             gate_input = y.expand(x.size(0)) if self.dg_gates else None
             with torch.no_grad():
-                x_recon = self.decode(z_mean, gate_input=gate_input)
+                x_recon = self.decode(z_mean, return_hidden=self.hidden, gate_input=gate_input)
 
             # Calculate reconstruction error
             recon_error = self.calculate_recon_loss(x.view(x.size(0), -1), x_recon.view(x.size(0), -1), average=average)
@@ -704,7 +708,8 @@ class AutoEncoder(ContinualLearner):
                 # -reconstruct input
                 gate_input = y.expand(batch_size_current) if self.dg_gates else None
                 with torch.no_grad():
-                    x_recon = self.decode(z, gate_input=gate_input, skip_last=self.fc_latent_layer)
+                    x_recon = self.decode(z, gate_input=gate_input, return_hidden=self.hidden,
+                                          skip_last=self.fc_latent_layer)
                     assert x_recon.shape[1] == x.shape[1]
                 # -calculate p_x_z (under Gaussian observation model with unit variance)
                 log_p_x_z = lf.log_Normal_standard(x=x, mean=x_recon, average=False, dim=-1)
