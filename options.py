@@ -21,6 +21,7 @@ def define_args(filename, description):
 
 
 def add_general_options(parser, single_task=False, generative=False, compare_code="none", only_MNIST=True, **kwargs):
+    parser.add_argument('--res-dir', type=str, default='none', help="specify the folder where results will be stored")
     parser.add_argument('--no-save', action='store_false', dest='save', help="don't save trained models")
     if single_task and generative:
             parser.add_argument('--save-all', action='store_true', help="also store conv- and deconv-layers")

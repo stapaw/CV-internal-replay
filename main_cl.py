@@ -715,9 +715,9 @@ def run(args, verbose=False):
 
     # -write out to text file
     # create folder for results for model if not exists
-    folder_path = os.path.join(args.r_dir, args.convE_ltag)
+    folder_path = os.path.join(args.r_dir, args.res_dir)
     if not args.hidden:
-        folder_path+='classic_generative'
+        folder_path += "classic_generative"
     os.makedirs(folder_path, exist_ok=True)
     output_path = "{}/acc-{}.json".format(folder_path, param_stamp)
     print("Saving results to {}".format(output_path))
@@ -734,7 +734,8 @@ def run(args, verbose=False):
     # If requested, generate pdf
     if args.pdf:
         # -open pdf
-        plot_name = "{}/{}.pdf".format(args.p_dir, param_stamp)
+        os.makedirs("{}/{}".format(args.p_dir, args.res_dir), exist_ok=True)
+        plot_name = "{}/{}/{}.pdf".format(args.p_dir, args.res_dir, param_stamp)
         pp = evaluate.visual.plt.open_pdf(plot_name)
 
         # -show metrics reflecting progression during training

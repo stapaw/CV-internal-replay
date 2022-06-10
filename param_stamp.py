@@ -239,7 +239,7 @@ def get_param_stamp(
         recon_stamp,
         "-s{}".format(args.seed) if not args.seed == 0 else "",
     )
-    param_stamp += "060622"
+    # param_stamp += args.res_dir
 
     ## Print param-stamp on screen and return
     if verbose:

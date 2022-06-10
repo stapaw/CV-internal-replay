@@ -1,4 +1,5 @@
 #!/bin/bash
+CUDA_VISIBLE_DEVICES=0
 
 FC_LAYERS=3
 HIDDEN_NEURONS=2000
@@ -6,16 +7,17 @@ ITERS=5000
 EPOCHS=100
 
 # Other batch-replay size
-BATCH_REPLAY=256
-MODEL_TAG=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_${BATCH_REPLAY}br_freeze_classifier
+BATCH_REPLAY=$1
+MODEL_TAG=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_${BATCH_REPLAY}br_proper
+RESULTS_DIR=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_${BATCH_REPLAY}br_freeze_classifier
 
-./main_pretrain.py \
-  --experiment=CIFAR10 \
-  --epochs=${EPOCHS} \
-  --augment \
-  --fc-units=${HIDDEN_NEURONS} \
-  --fc-layers=${FC_LAYERS} \
-  --convE-stag=${MODEL_TAG} \
+#./main_pretrain.py \
+#  --experiment=CIFAR10 \
+#  --epochs=${EPOCHS} \
+#  --augment \
+#  --fc-units=${HIDDEN_NEURONS} \
+#  --fc-layers=${FC_LAYERS} \
+#  --convE-stag=${MODEL_TAG} \
 
 
 FC_LATENT_LAYER=0
@@ -41,7 +43,7 @@ FC_LATENT_LAYER=0
   --pre-convE \
   --convE-ltag=${MODEL_TAG} \
   --hidden \
-  --fc-latent-layer=${FC_LATENT_LAYER}
+  --fc-latent-layer=${FC_LATENT_LAYER} \
 
 FC_LATENT_LAYER=1
 ./main_cl.py \
@@ -66,7 +68,7 @@ FC_LATENT_LAYER=1
   --pre-convE \
   --convE-ltag=${MODEL_TAG} \
   --hidden \
-  --fc-latent-layer=${FC_LATENT_LAYER}
+  --fc-latent-layer=${FC_LATENT_LAYER} \
 
 FC_LATENT_LAYER=2
 ./main_cl.py \
@@ -91,7 +93,7 @@ FC_LATENT_LAYER=2
   --pre-convE \
   --convE-ltag=${MODEL_TAG} \
   --hidden \
-  --fc-latent-layer=${FC_LATENT_LAYER}
+  --fc-latent-layer=${FC_LATENT_LAYER} \
 #
 #
 #FC_LATENT_LAYER=3
@@ -117,4 +119,4 @@ FC_LATENT_LAYER=2
 #  --pre-convE \
 #  --convE-ltag=${MODEL_TAG} \
 #  --hidden \
-#  --fc-latent-layer=${FC_LATENT_LAYER}
+#  --fc-latent-layer=${FC_LATENT_LAYER} \
