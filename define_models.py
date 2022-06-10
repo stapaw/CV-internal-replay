@@ -27,6 +27,7 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
             z_dim=args.g_z_dim if generator  and hasattr(args, 'g_z_dim') else args.z_dim,
             # -decoder
             hidden=checkattr(args, 'hidden'),
+            latent=checkattr(args, 'latent'),
             recon_loss=args.recon_loss, network_output="none" if checkattr(args, "normalize") else "sigmoid",
             deconv_type=args.deconv_type if hasattr(args, "deconv_type") else "standard",
             dg_gates=utils.checkattr(args, 'dg_gates'), dg_type=args.dg_type if hasattr(args, 'dg_type') else "task",
@@ -40,7 +41,6 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
             lamda_rcl=1. if not hasattr(args, 'rcl') else args.rcl,
             lamda_vl=1. if not hasattr(args, 'vl') else args.vl,
             lamda_pl=(0. if generator else 1.) if not hasattr(args, 'pl') else args.pl,
-            fc_latent_layer=args.fc_latent_layer
         ).to(device)
     else:
         model = AutoEncoder(
@@ -93,7 +93,8 @@ def define_classifier(args, config, device):
             fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl, excit_buffer=True,
             # -training-specific components
             hidden=checkattr(args, 'hidden'),
-            fc_latent_layer=args.fc_latent_layer if "fc_latent_layer" in args else 0
+            latent=checkattr(args, 'latent'),
+            latent_replay_layer_frequency=[float(v) for v in args.latent_replay_layer_frequency.split(",")]
         ).to(device)
     else:
         model = Classifier(

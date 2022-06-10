@@ -234,9 +234,11 @@ def add_bir_options(parser, only_MNIST=False, compare_code="none", **kwargs):
     # -hidden replay
     if (not only_MNIST) and compare_code in ("none"):
         BIR.add_argument('--hidden', action="store_true", help="replay at 'internal level' (after conv-layers)")
-        BIR.add_argument("--fc-latent-layer", default=0, type=int, help="index of input layer at which latent replay starts")
-        BIR.add_argument("--freeze-latent-encoder", action='store_true', help="if set, after first task in CL phase "
-                                                                              "will freeze all classifier encoder weights up to the `fc-latent-layer`")
+        BIR.add_argument('--latent', action="store_true", help="if set, internal replay will be done with "
+                                                               "additional constraints on intermediate representations"
+                                                               "in generator")
+        BIR.add_argument("--latent-replay-layer-frequency", default="0.3,0.5,0.2", type=str,
+                         help="comma-separated latent replay update frequency for each layer")
     return parser
 
 

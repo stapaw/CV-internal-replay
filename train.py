@@ -100,13 +100,6 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
     # Loop over all tasks.
     for task, train_dataset in enumerate(train_datasets, 1):
 
-        # If we do latent replay and `freeze_latent_encoder` is set, disable weight updates
-        # in classifier after fist task
-        if task > 1 and args.hidden and args.freeze_latent_encoder:
-            for layer_id in range(args.fc_latent_layer):
-                for param in getattr(model.fcE, "fcLayer{}".format(layer_id+1)).parameters():
-                    param.requires_grad = False
-
         # If offline replay-setting, create large database of all tasks so far
         if replay_mode=="offline" and (not scenario=="task"):
             train_dataset = ConcatDataset(train_datasets[:task])
@@ -227,6 +220,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                         allowed_classes = list(range(classes_per_task*task_id, classes_per_task*(task_id+1)))
                         batch_size_replay_to_use = int(np.ceil(batch_size_replay / (task-1)))
                         x_temp_ = previous_generator.sample(batch_size_replay_to_use, allowed_classes=allowed_classes,
+                                                            return_internal=args.hidden, return_intermediate=args.latent,
                                                             only_x=False)
                         x_.append(x_temp_[0])
                         task_used.append(x_temp_[2])
@@ -238,7 +232,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                     # -generate inputs representative of previous tasks
                     x_temp_ = previous_generator.sample(
                         batch_size_replay, allowed_classes=allowed_classes, allowed_domains=allowed_domains,
-                        only_x=False,
+                        return_internal=args.hidden, return_intermediate=args.latent, only_x=False,
                     )
                     x_ = x_temp_[0]
                     task_used = x_temp_[2]
@@ -250,7 +244,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                 if scenario in ("domain", "class") and previous_model.mask_dict is None:
                     # -if replay does not need to be evaluated for each task (ie, not Task-IL and no task-specific mask)
                     with torch.no_grad():
-                        all_scores_ = previous_model.classify(x_, not_hidden=False if Generative else True, skip_first=args.fc_latent_layer)
+                        all_scores_ = previous_model.classify(x_[-1], not_hidden=False if Generative else True, intermediate=False)
                     scores_ = all_scores_[:, :(classes_per_task*(task-1))] if (
                             scenario=="class"
                     ) else all_scores_ # -> when scenario=="class", zero probs will be added in [loss_fn_kd]-function
@@ -345,9 +339,9 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
 
             #---> Train GENERATOR
             if generator is not None and batch_index <= iters_gen:
-                if utils.checkattr(args, "hidden"):
+                if utils.checkattr(args, "hidden") or utils.checkattr(args, "latent"):
                     with torch.no_grad():
-                        x_enc = model(x, skip_last=args.fc_lay-args.fc_latent_layer-1, hidden=True)
+                        x_enc = model(x, return_internal=args.hidden, return_intermediate=args.latent)
                         # encoded X should have dimensionality fitting latent layer
                         # assert x_enc.shape[-1] == getattr(generator.fcE, "fcLayer{}".format(args.fc_latent_layer+1)).linear.in_features
                 else:
