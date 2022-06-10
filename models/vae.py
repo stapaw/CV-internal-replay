@@ -267,7 +267,7 @@ class AutoEncoder(ContinualLearner):
                     else self.fcD(hD, return_lists=True)
                 return intermediate_features + [internal_features]
             else:
-                image_features, = self.fcD(hD, gate_input=gate_input) if self.dg_gates else self.fcD(hD)
+                image_features = self.fcD(hD, gate_input=gate_input) if self.dg_gates else self.fcD(hD)
 
             image_recon = self.convD(self.to_image(image_features))
             return image_recon
@@ -643,18 +643,21 @@ class AutoEncoder(ContinualLearner):
             y = y.to(self._device())
 
             # If internal replay, convert inputs to hidden feature representations
-            if self.hidden:
-                with torch.no_grad():
-                    x = self.input_to_hidden(x)
+            # TODO: for frequency on latent layers runs only
+            # if self.hidden:
+            #     with torch.no_grad():
+            #         x = self.input_to_hidden(x)
 
             # Run forward pass of model to get [z_mean]
             with torch.no_grad():
-                z_mean, _, _, _ = self.encode(x)
+                # z_mean, _, _, _ = self.encode(x)
+                z_mean, _, _, _ = self.encode(x, True)
 
             # Run backward pass of model to reconstruct input
             gate_input = y.expand(x.size(0)) if self.dg_gates else None
             with torch.no_grad():
-                x_recon = self.decode(z_mean, return_hidden=self.hidden, gate_input=gate_input)
+                # x_recon = self.decode(z_mean, return_hidden=self.hidden, gate_input=gate_input)
+                x_recon = self.decode(z_mean, return_internal=False, return_intermediate=False, gate_input=gate_input)
 
             # Calculate reconstruction error
             recon_error = self.calculate_recon_loss(x.view(x.size(0), -1), x_recon.view(x.size(0), -1), average=average)
@@ -694,14 +697,16 @@ class AutoEncoder(ContinualLearner):
             if self.hidden:
                 with torch.no_grad():
                     if classifier is not None:
-                        x = classifier(x, hidden=True)
+                        # x = classifier(x, hidden=True)
+                        x = classifier(x)
                         # assert x.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer+1)).linear.in_features
                     else:
                         x = self.convE(x)
 
             # Run forward pass of model to get [z_mu] and [z_logvar]
             with torch.no_grad():
-                z_mu, z_logvar, _, _ = self.encode(x, skip_first=self.fc_latent_layer)
+                # z_mu, z_logvar, _, _ = self.encode(x, skip_first=self.fc_latent_layer)
+                z_mu, z_logvar, _, _ = self.encode(x)
 
             # Importance samples will be calcualted in batches, get number of required batches
             repeats = int(np.ceil(S / batch_size))
