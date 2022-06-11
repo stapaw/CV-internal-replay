@@ -94,7 +94,7 @@ def define_classifier(args, config, device):
             # -training-specific components
             hidden=checkattr(args, 'hidden'),
             latent=checkattr(args, 'latent'),
-            latent_replay_layer_frequency=[float(v) for v in args.latent_replay_layer_frequency.split(",")]
+            latent_replay_layer_frequency= [1.0 if elem is 0 else 0 for elem in range(args.fc_lay-1)] if not hasattr(args, 'latent_replay_layer_frequency') else [float(v) for v in args.latent_replay_layer_frequency.split(",")]
         ).to(device)
     else:
         model = Classifier(
