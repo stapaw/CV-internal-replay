@@ -64,9 +64,6 @@ def train(model, train_loader, iters, loss_cbs=list(), eval_cbs=list(), save_eve
             if (save_every is not None) and (iteration % save_every) == 0:
                 utils.save_checkpoint(model.convE, model_dir=m_dir)
 
-            # Save checkpoint?
-            if (save_every is not None) and (iteration % save_every) == 0:
-                utils.save_checkpoint(model.convD, model_dir=m_dir)
 
 
 def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=None, classes_per_task=None,

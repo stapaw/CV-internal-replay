@@ -39,5 +39,6 @@ RESULTS_DIR=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_${BATCH_R
   --res-dir=${RESULTS_DIR} \
   --latent-replay-layer-frequency=${FREQUENCY} \
   --latent \
-  --eval-tag=cifar100_pretrained
+  --eval-tag=cifar100_pretrained \
+  --test
 
