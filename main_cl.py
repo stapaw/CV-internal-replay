@@ -739,7 +739,7 @@ def run(args, verbose=False):
         "precision":precision.tolist(),
         "recall": recall.tolist(),
         # "IS": float(IS),
-        "FID":float(FID),
+        "FID": float(FID),
         "args": args.__dict__,
     }
 

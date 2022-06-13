@@ -1,8 +1,8 @@
 #!/bin/bash
 CUDA_VISIBLE_DEVICES=1
 
-FC_LAYERS=4
-HIDDEN_NEURONS=1000
+FC_LAYERS=3
+HIDDEN_NEURONS=2000
 ITERS=5000
 EPOCHS=100
 FREQUENCY=$2
@@ -39,6 +39,6 @@ RESULTS_DIR=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_${BATCH_R
   --res-dir=${RESULTS_DIR} \
   --latent-replay-layer-frequency=${FREQUENCY} \
   --latent \
-  --eval-tag=cifar100_pretrained
+  --eval-tag=cifar100_pretrained_3hidden
 #  --test
 
