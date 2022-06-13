@@ -224,7 +224,10 @@ def get_param_stamp(
             args.recon_loss,
         )
     elif hasattr(args, "replay") and args.replay == "generative":
-        recon_stamp = "--{}".format(args.recon_loss)
+        if hasattr(args, "recon_loss"):
+            recon_stamp = "--{}".format(args.recon_loss)
+        else:
+            recon_stamp = ""
     else:
         recon_stamp = ""
 

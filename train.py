@@ -5,6 +5,7 @@ import tqdm
 import copy
 import utils
 from models.cl.continual_learner import ContinualLearner
+from models.vae import AutoEncoder
 
 
 def train(model, train_loader, iters, loss_cbs=list(), eval_cbs=list(), save_every=None, m_dir="./store/models",
@@ -35,7 +36,10 @@ def train(model, train_loader, iters, loss_cbs=list(), eval_cbs=list(), save_eve
 
             # Perform training-step on this batch
             data, y = data.to(device), y.to(device)
-            loss_dict = model.train_a_batch(data, y=y, freeze_convE=freeze_convE)
+            if isinstance(model, AutoEncoder):
+                loss_dict = model.train_a_batch(data, y=data, freeze_convE=freeze_convE)
+            else:
+                loss_dict = model.train_a_batch(data, y=y, freeze_convE=freeze_convE)
 
             # Fire training-callbacks (for visualization of training-progress)
             for loss_cb in loss_cbs:
@@ -56,6 +60,13 @@ def train(model, train_loader, iters, loss_cbs=list(), eval_cbs=list(), save_eve
             if (save_every is not None) and (iteration % save_every) == 0:
                 utils.save_checkpoint(model, model_dir=m_dir)
 
+            # Save checkpoint?
+            if (save_every is not None) and (iteration % save_every) == 0:
+                utils.save_checkpoint(model.convE, model_dir=m_dir)
+a
+            # Save checkpoint?
+            if (save_every is not None) and (iteration % save_every) == 0:
+                utils.save_checkpoint(model.convD, model_dir=m_dir)
 
 
 def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=None, classes_per_task=None,
