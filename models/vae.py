@@ -243,7 +243,7 @@ class AutoEncoder(ContinualLearner):
         eps = std.new(std.size()).normal_()#.requires_grad_()
         return eps.mul(std).add_(mu)
 
-    def decode(self, z, return_internal, return_intermediate, gate_input=None):
+    def decode(self, z, return_internal, return_intermediate,return_last_fc=False, gate_input=None):
         '''Decode latent variable activations.
 
         INPUT:  - [z]            <2D-tensor>; latent variables to be decoded
@@ -259,8 +259,10 @@ class AutoEncoder(ContinualLearner):
         # -put inputs through decoder
         hD = self.fromZ(z, gate_input=gate_input) if self.dg_gates else self.fromZ(z)
 
-        if return_internal and not return_intermediate:
+        if return_internal and not return_intermediate and not return_last_fc:
             return hD
+        elif return_internal and not return_intermediate and return_last_fc:
+            return self.fcD(hD)
         else:
             if return_intermediate:
                 internal_features, intermediate_features, _ = self.fcD(hD, gate_input=gate_input, return_lists=True) if self.dg_gates \
@@ -319,7 +321,7 @@ class AutoEncoder(ContinualLearner):
     ##------ SAMPLE FUNCTIONS --------##
 
     def sample(self, size, allowed_classes=None, class_probs=None, sample_mode=None, allowed_domains=None,
-               only_x=False, return_internal=False, return_intermediate=False, **kwargs):
+               only_x=False, return_internal=False, return_intermediate=False, return_last_fc=True, **kwargs):
         '''Generate [size] samples from the model. Outputs are tensors (not "requiring grad"), on same device as <self>.
 
         INPUT:  - [allowed_classes]     <list> of [class_ids] from which to sample
@@ -402,7 +404,7 @@ class AutoEncoder(ContinualLearner):
         # decode z into image X
         with torch.no_grad():
             X = self.decode(z, gate_input=(task_used if self.dg_type=="task" else y_used) if self.dg_gates else None,
-                            return_internal=return_internal, return_intermediate=return_intermediate)
+                            return_internal=return_internal, return_intermediate=return_intermediate, return_last_fc=return_last_fc)
 
         # return samples as [batch_size]x[channels]x[image_size]x[image_size] tensor, plus requested additional info
         return X if only_x else (X, y_used, task_used)

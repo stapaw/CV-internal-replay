@@ -461,7 +461,7 @@ def run(args, verbose=False):
         load_name = (
             "mM-{}".format(param_stamp)
             if (not hasattr(args, "full_ltag") or args.full_ltag == "none")
-            else "{}-{}".format(model.name, args.full_ltag)
+            else "mM-{}".format(args.full_ltag)
         )
         utils.load_checkpoint(
             model,
@@ -476,7 +476,7 @@ def run(args, verbose=False):
             load_name = (
                 "gM-{}".format(param_stamp)
                 if (not hasattr(args, "full_ltag") or args.full_ltag == "none")
-                else "{}-{}".format(generator.name, args.full_ltag)
+                else "gM-{}".format(args.full_ltag)
             )
             utils.load_checkpoint(
                 generator, args.m_dir, name=load_name, verbose=verbose
@@ -613,7 +613,7 @@ def run(args, verbose=False):
             total_n = len(test_set)
             n_repeats = int(np.ceil(total_n / args.batch))
             # -sample data from generator (for IS, FID and Precision & Recall)
-            # gen_x = gen_model.sample(size=total_n, only_x=True, return_internal=True)
+            gen_x = gen_model.sample(size=total_n, only_x=True, return_internal=True)
             # # -generate predictions for generated data (for IS)
             # gen_pred = []
             # for i in range(n_repeats):
@@ -641,10 +641,10 @@ def run(args, verbose=False):
             #         )
             #
             # gen_pred = np.concatenate(gen_pred)
-            # # -generate embeddings for generated data (for FID and Precision & Recall)
-            # gen_emb = []
-            # for i in range(n_repeats):
-            #     with torch.no_grad():
+            # -generate embeddings for generated data (for FID and Precision & Recall)
+            gen_emb = []
+            for i in range(n_repeats):
+                with torch.no_grad():
             #         # gen_emb.append(
             #         #     pretrained_classifier.feature_extractor(
             #         #         gen_x[
@@ -657,22 +657,20 @@ def run(args, verbose=False):
             #         #     .cpu()
             #         #     .numpy()
             #         # )
-            #         gen_emb.append(
-            #             pretrained_classifier.feature_extractor(
-            #                 gen_x[
-            #                     (i * args.batch) : int(
-            #                         min(((i + 1) * args.batch), total_n)
-            #                     )
-            #                 ],
-            #                 from_hidden=False,
-            #             )
-            #             .cpu()
-            #             .numpy()
-            #         )
-            #
-            # gen_emb = np.concatenate(gen_emb)
+                    gen_emb.append(
+                        pretrained_classifier.feature_extractor(
+                            gen_x[
+                                (i * args.batch) : int(
+                                    min(((i + 1) * args.batch), total_n)
+                                )
+                            ],
+                            from_hidden=True,
+                        )
+                        .cpu()
+                        .numpy()
+                    )
 
-            gen_emb = gen_model.sample(size=total_n, only_x=True, return_internal=True).cpu().data.numpy()
+            gen_emb = np.concatenate(gen_emb)
 
             # -generate embeddings for test data (for FID and Precision & Recall)
             data_loader = utils.get_data_loader(
