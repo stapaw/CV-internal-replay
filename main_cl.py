@@ -613,64 +613,67 @@ def run(args, verbose=False):
             total_n = len(test_set)
             n_repeats = int(np.ceil(total_n / args.batch))
             # -sample data from generator (for IS, FID and Precision & Recall)
-            gen_x = gen_model.sample(size=total_n, only_x=True)
-            # -generate predictions for generated data (for IS)
-            gen_pred = []
-            for i in range(n_repeats):
-                x = gen_x[(i * args.batch) : int(min(((i + 1) * args.batch), total_n))]
-                with torch.no_grad():
-                    # gen_pred.append(
-                    #     F.softmax(
-                    #         pretrained_classifier.hidden_to_output(x)
-                    #         if args.hidden
-                    #         else pretrained_classifier(x),
-                    #         dim=1,
-                    #     )
-                    #     .cpu()
-                    #     .numpy()
-                    # )
-                    gen_pred.append(
-                        F.softmax(
-                            pretrained_classifier(x)
-                            if args.hidden
-                            else pretrained_classifier(x),
-                            dim=1,
-                        )
-                        .cpu()
-                        .numpy()
-                    )
+            # gen_x = gen_model.sample(size=total_n, only_x=True, return_internal=True)
+            # # -generate predictions for generated data (for IS)
+            # gen_pred = []
+            # for i in range(n_repeats):
+            #     x = gen_x[(i * args.batch) : int(min(((i + 1) * args.batch), total_n))]
+            #     with torch.no_grad():
+            #         # gen_pred.append(
+            #         #     F.softmax(
+            #         #         pretrained_classifier.hidden_to_output(x)
+            #         #         if args.hidden
+            #         #         else pretrained_classifier(x),
+            #         #         dim=1,
+            #         #     )
+            #         #     .cpu()
+            #         #     .numpy()
+            #         # )
+            #         gen_pred.append(
+            #             F.softmax(
+            #                 pretrained_classifier(x)
+            #                 if args.hidden
+            #                 else pretrained_classifier(x),
+            #                 dim=1,
+            #             )
+            #             .cpu()
+            #             .numpy()
+            #         )
+            #
+            # gen_pred = np.concatenate(gen_pred)
+            # # -generate embeddings for generated data (for FID and Precision & Recall)
+            # gen_emb = []
+            # for i in range(n_repeats):
+            #     with torch.no_grad():
+            #         # gen_emb.append(
+            #         #     pretrained_classifier.feature_extractor(
+            #         #         gen_x[
+            #         #             (i * args.batch) : int(
+            #         #                 min(((i + 1) * args.batch), total_n)
+            #         #             )
+            #         #         ],
+            #         #         from_hidden=args.hidden,
+            #         #     )
+            #         #     .cpu()
+            #         #     .numpy()
+            #         # )
+            #         gen_emb.append(
+            #             pretrained_classifier.feature_extractor(
+            #                 gen_x[
+            #                     (i * args.batch) : int(
+            #                         min(((i + 1) * args.batch), total_n)
+            #                     )
+            #                 ],
+            #                 from_hidden=False,
+            #             )
+            #             .cpu()
+            #             .numpy()
+            #         )
+            #
+            # gen_emb = np.concatenate(gen_emb)
 
-            gen_pred = np.concatenate(gen_pred)
-            # -generate embeddings for generated data (for FID and Precision & Recall)
-            gen_emb = []
-            for i in range(n_repeats):
-                with torch.no_grad():
-                    # gen_emb.append(
-                    #     pretrained_classifier.feature_extractor(
-                    #         gen_x[
-                    #             (i * args.batch) : int(
-                    #                 min(((i + 1) * args.batch), total_n)
-                    #             )
-                    #         ],
-                    #         from_hidden=args.hidden,
-                    #     )
-                    #     .cpu()
-                    #     .numpy()
-                    # )
-                    gen_emb.append(
-                        pretrained_classifier.feature_extractor(
-                            gen_x[
-                                (i * args.batch) : int(
-                                    min(((i + 1) * args.batch), total_n)
-                                )
-                            ],
-                            from_hidden=False,
-                        )
-                        .cpu()
-                        .numpy()
-                    )
+            gen_emb = gen_model.sample(size=total_n, only_x=True, return_internal=True).cpu().data.numpy()
 
-            gen_emb = np.concatenate(gen_emb)
             # -generate embeddings for test data (for FID and Precision & Recall)
             data_loader = utils.get_data_loader(
                 test_set, batch_size=args.batch, cuda=cuda
@@ -686,20 +689,20 @@ def run(args, verbose=False):
             real_emb = np.concatenate(real_emb)
 
             # Calculate "Inception Score" (IS)
-            py = gen_pred.mean(axis=0)
-            is_per_datapoint = []
-            for i in range(len(gen_pred)):
-                pyx = gen_pred[i, :]
-                is_per_datapoint.append(entropy(pyx, py))
-            IS = np.exp(np.mean(is_per_datapoint))
-            if verbose:
-                print("=> Inception Score = {:.4f}\n".format(IS))
-            # -write out to text file
-            output_file = open(
-                "{}/is{}-{}.txt".format(args.r_dir, eval_tag, param_stamp), "w"
-            )
-            output_file.write("{}\n".format(IS))
-            output_file.close()
+            # py = gen_pred.mean(axis=0)
+            # is_per_datapoint = []
+            # for i in range(len(gen_pred)):
+            #     pyx = gen_pred[i, :]
+            #     is_per_datapoint.append(entropy(pyx, py))
+            # IS = np.exp(np.mean(is_per_datapoint))
+            # if verbose:
+            #     print("=> Inception Score = {:.4f}\n".format(IS))
+            # # -write out to text file
+            # output_file = open(
+            #     "{}/is{}-{}.txt".format(args.r_dir, eval_tag, param_stamp), "w"
+            # )
+            # output_file.write("{}\n".format(IS))
+            # output_file.close()
 
             ## Calculate "Frechet Inception Distance" (FID)
             FID = fid.calculate_fid_from_embedding(gen_emb, real_emb)
@@ -737,7 +740,7 @@ def run(args, verbose=False):
         },
         "precision":precision.tolist(),
         "recall": recall.tolist(),
-        "IS": float(IS),
+        # "IS": float(IS),
         "FID":float(FID),
         "args": args.__dict__,
     }
