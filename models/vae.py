@@ -27,7 +27,7 @@ class AutoEncoder(ContinualLearner):
                  # -prior
                  prior="standard", z_dim=20, per_class=False, n_modes=1,
                  # -decoder
-                 recon_loss='BCE', network_output="sigmoid", deconv_type="standard", hidden=False, latent=False,
+                 recon_loss='BCE', network_output="sigmoid", deconv_type="standard", hidden=False, latent=False,only_last_layer=False,
                  dg_gates=False, dg_type="task", dg_prop=0., tasks=5, scenario="task", device='cuda',
                  # -classifer
                  classifier=True, classify_opt="beforeZ",
@@ -51,6 +51,7 @@ class AutoEncoder(ContinualLearner):
         # -replay hidden representations? (-> replay only propagates through fc-layers)
         self.hidden = hidden
         self.latent = latent
+        self.only_last_layer=only_last_layer
         # -type of loss to be used for reconstruction
         self.recon_loss = recon_loss # options: BCE|MSE
         self.network_output = network_output
@@ -807,6 +808,7 @@ class AutoEncoder(ContinualLearner):
                 x_in, gate_input=(task_tensor if self.dg_type=="task" else y) if self.dg_gates else None, full=True,
                 reparameterize=True, return_internal=self.hidden, return_intermediate=self.latent
             )
+
             # if self.hidden:
             #     assert recon_batch.shape[1] == getattr(self.fcE, "fcLayer{}".format(self.fc_latent_layer+1)).linear.in_features
             #     assert recon_batch.shape[1] == getattr(self.fcD, "fcLayer{}".format(self.fc_layers - 1 - self.fc_latent_layer)).linear.out_features
@@ -822,6 +824,10 @@ class AutoEncoder(ContinualLearner):
                 x_in = x[::-1]
             else:
                 x_in = x
+
+            if self.only_last_layer:
+                recon_batch = recon_batch[-1]
+                x_in = x[0]
             # Calculate all losses
             reconL, variatL, predL, _ = self.loss_function(
                 x=x_in, y=y, x_recon=recon_batch, y_hat=y_hat, scores=None, mu=mu, z=z, logvar=logvar,

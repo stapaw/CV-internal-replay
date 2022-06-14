@@ -28,6 +28,7 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
             # -decoder
             hidden=checkattr(args, 'hidden'),
             latent=checkattr(args, 'latent'),
+            only_last_layer=checkattr(args, 'only_last_layer'),
             recon_loss= args.recon_loss if hasattr(args, "recon_loss") else "MSE",
             network_output="none" if checkattr(args, "normalize") else "sigmoid",
             deconv_type=args.deconv_type if hasattr(args, "deconv_type") else "standard",

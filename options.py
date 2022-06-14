@@ -237,6 +237,7 @@ def add_bir_options(parser, only_MNIST=False, compare_code="none", **kwargs):
         BIR.add_argument('--latent', action="store_true", help="if set, internal replay will be done with "
                                                                "additional constraints on intermediate representations"
                                                                "in generator")
+        BIR.add_argument('--only-last-layer', action="store_true", help="if set, internal replay will be done only with loss on the last layer")
         BIR.add_argument("--latent-replay-layer-frequency", default="0.3,0.5,0.2", type=str,
                          help="comma-separated latent replay update frequency for each layer")
     return parser
