@@ -6,6 +6,7 @@ HIDDEN_NEURONS=2000
 ITERS=5000
 EPOCHS=100
 FREQUENCY=$2
+SEED=$3
 
 # Other batch-replay size
 BATCH_REPLAY=$1
@@ -20,7 +21,7 @@ RESULTS_DIR=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_${BATCH_R
   --tasks=10 \
   --batch=256 \
   --batch-replay=${BATCH_REPLAY} \
-  --seed=0 \
+  --seed=${SEED} \
   --replay=generative \
   --prior=GMM \
   --per-class \

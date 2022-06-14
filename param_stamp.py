@@ -176,7 +176,7 @@ def get_param_stamp(
 
     # -for replay
     if replay:
-        replay_stamp = "{H}{rep}{bat}{distil}{model}{gi}{fll}".format(
+        replay_stamp = "{H}{rep}{bat}{distil}{model}{gi}{fll}{seed}".format(
             H=""
             if not args.replay == "generative"
             else (
@@ -210,6 +210,8 @@ def get_param_stamp(
             fll="-lrlf[{}]".format(args.latent_replay_layer_frequency)
             if utils.checkattr(args, "latent")
             else "",
+            seed=args.seed if
+                hasattr(args, "seed") else ""
         )
         if verbose:
             print(" --> replay:        " + replay_stamp)
