@@ -1,8 +1,8 @@
 #!/bin/bash
 CUDA_VISIBLE_DEVICES=1
 
-FC_LAYERS=4
-HIDDEN_NEURONS=1000
+FC_LAYERS=3
+HIDDEN_NEURONS=2000
 ITERS=5000
 EPOCHS=100
 FREQUENCY=$2
@@ -12,7 +12,7 @@ SEED=$3
 BATCH_REPLAY=$1
 echo batch replay ${BATCH_REPLAY}
 MODEL_TAG=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_128br_proper
-RESULTS_DIR=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_${BATCH_REPLAY}br_${ITERS}iters_${FREQUENCY}frequency_fid
+RESULTS_DIR=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_${BATCH_REPLAY}br_${ITERS}iters_${FREQUENCY}frequency_fid_only_last
 
 
 ./main_cl.py \
@@ -40,6 +40,7 @@ RESULTS_DIR=cifar10_${FC_LAYERS}fc_${HIDDEN_NEURONS}hn_${EPOCHS}epochs_${BATCH_R
   --res-dir=${RESULTS_DIR} \
   --latent-replay-layer-frequency=${FREQUENCY} \
   --latent \
-  --eval-tag=cifar100_pretrained \
-  --test
+  --eval-tag=cifar100_pretrained_3hidden \
+  --only-last-layer
+#  --test
 

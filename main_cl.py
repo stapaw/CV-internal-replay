@@ -719,13 +719,13 @@ def run(args, verbose=False):
             file_name = "{}/precision{}-{}.txt".format(
                 args.r_dir, eval_tag, param_stamp
             )
-            with open(file_name, "w") as f:
-                for item in precision:
-                    f.write("%s\n" % item)
-            file_name = "{}/recall{}-{}.txt".format(args.r_dir, eval_tag, param_stamp)
-            with open(file_name, "w") as f:
-                for item in recall:
-                    f.write("%s\n" % item)
+            # with open(file_name, "w") as f:
+            #     for item in precision:
+            #         f.write("%s\n" % item)
+            # file_name = "{}/recall{}-{}.txt".format(args.r_dir, eval_tag, param_stamp)
+            # with open(file_name, "w") as f:
+            #     for item in recall:
+            #         f.write("%s\n" % item)
 
     # TODO: add saving of FID etc
     results_dict = {
