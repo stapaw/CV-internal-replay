@@ -76,21 +76,23 @@ class Classifier(ContinualLearner):
         if latent_replay_strategy is not None:
             if latent_replay_strategy == "basic":
                 self.latent_replay_layer_frequencies = [1 / fc_layers for _ in range(fc_layers)]
-            elif latent_replay_strategy == "cumulative_update_weighted":
-                cumulative_updates_per_layer = [sum(weight_counts[i:]) for i in
-                                                range(len(weight_counts))]
+            elif latent_replay_strategy == "cumulative_weights":
+                cumulative_updates_per_layer = [sum(self.weight_counts[i:]) for i in
+                                                range(len(self.weight_counts))]
                 raw_frequencies = [cumulative_updates_per_layer[0] / c for c in
                                    cumulative_updates_per_layer]
                 normalized_frequencies = [r / sum(raw_frequencies) for r in raw_frequencies]
                 self.latent_replay_layer_frequencies = normalized_frequencies
-            elif latent_replay_strategy == "total_weights_weighted":
-                raw_frequencies = [sum(weight_counts) / c for c in
-                                   weight_counts]
+            elif latent_replay_strategy == "total_weights":
+                raw_frequencies = [sum(self.weight_counts) / c for c in
+                                   self.weight_counts]
                 normalized_frequencies = [r / sum(raw_frequencies) for r in raw_frequencies]
                 self.latent_replay_layer_frequencies = normalized_frequencies
             else:
                 raise NotImplementedError()
         else:
+            if self.latent:
+                raise ValueError("`latent_replay_strategy` should be set for PLR.")
             self.latent_replay_layer_frequencies = [1] + [0 for _ in range(fc_layers - 1)]
 
     def relative_cost(self):

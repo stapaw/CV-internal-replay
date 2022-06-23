@@ -235,7 +235,7 @@ def add_bir_options(parser, only_MNIST=False, compare_code="none", **kwargs):
     if (not only_MNIST) and compare_code in ("none"):
         BIR.add_argument('--hidden', action="store_true", help="replay at 'internal level' (after conv-layers)")
         BIR.add_argument('--latent', action="store_true", help="if set, will run latent replay (requires provided `latent-replay-strategy`)")
-        BIR.add_argument("--latent-replay-strategy", default=None, choices=["basic", "cumulative_update_weighted", "total_weights_weighted"],
+        BIR.add_argument("--latent-replay-strategy", default=None, choices=["basic", "cumulative_weights", "total_weights"],
                          help="latent replay strategy")
     return parser
 
