@@ -28,7 +28,6 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
             # -decoder
             hidden=checkattr(args, 'hidden'),
             latent=checkattr(args, 'latent'),
-            only_last_layer=checkattr(args, 'only_last_layer'),
             recon_loss= args.recon_loss if hasattr(args, "recon_loss") else "MSE",
             network_output="none" if checkattr(args, "normalize") else "sigmoid",
             deconv_type=args.deconv_type if hasattr(args, "deconv_type") else "standard",
@@ -43,6 +42,7 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
             lamda_rcl=1. if not hasattr(args, 'rcl') else args.rcl,
             lamda_vl=1. if not hasattr(args, 'vl') else args.vl,
             lamda_pl=(0. if generator else 1.) if not hasattr(args, 'pl') else args.pl,
+            c_h_dim=args.h_dim
         ).to(device)
     else:
         model = AutoEncoder(
@@ -96,7 +96,7 @@ def define_classifier(args, config, device):
             # -training-specific components
             hidden=checkattr(args, 'hidden'),
             latent=checkattr(args, 'latent'),
-            latent_replay_layer_frequency= [1.0 if elem is 0 else 0 for elem in range(args.fc_lay-1)] if not hasattr(args, 'latent_replay_layer_frequency') else [float(v) for v in args.latent_replay_layer_frequency.split(",")]
+            latent_replay_strategy=args.latent_replay_strategy
         ).to(device)
     else:
         model = Classifier(

@@ -21,7 +21,7 @@ class Classifier(ContinualLearner):
                  fc_layers=3, fc_units=1000, h_dim=400, fc_drop=0, fc_bn=True, fc_nl="relu", fc_gated=False,
                  bias=True, excitability=False, excit_buffer=False,
                  # -training-specific settings (can be changed after setting up model)
-                 hidden=False, latent=False, latent_replay_layer_frequency=None):
+                 hidden=False, latent=False, latent_replay_strategy=None):
 
         # model configurations
         super().__init__()
@@ -34,8 +34,6 @@ class Classifier(ContinualLearner):
         # settings for training
         self.hidden = hidden
         self.latent = latent
-        self.latent_replay_layer_frequency = latent_replay_layer_frequency
-
         #--> if True, [self.classify] & replayed data of [self.train_a_batch] expected to be "hidden data"
 
         # optimizer (needs to be set before training starts))
@@ -72,6 +70,35 @@ class Classifier(ContinualLearner):
         #--> classifier
         self.classifier = fc_layer(self.units_before_classifier, classes, excit_buffer=True, nl='none', drop=fc_drop)
 
+        self.weight_counts = [sum(p.numel() for p in getattr(self.fcE, "fcLayer{}".format(i+1)).parameters()) for i in range(fc_layers-1)] +\
+                        [sum(p.numel() for p in self.classifier.parameters())]
+
+        if latent_replay_strategy is not None:
+            if latent_replay_strategy == "basic":
+                self.latent_replay_layer_frequencies = [1 / fc_layers for _ in range(fc_layers)]
+            elif latent_replay_strategy == "cumulative_update_weighted":
+                cumulative_updates_per_layer = [sum(weight_counts[i:]) for i in
+                                                range(len(weight_counts))]
+                raw_frequencies = [cumulative_updates_per_layer[0] / c for c in
+                                   cumulative_updates_per_layer]
+                normalized_frequencies = [r / sum(raw_frequencies) for r in raw_frequencies]
+                self.latent_replay_layer_frequencies = normalized_frequencies
+            elif latent_replay_strategy == "total_weights_weighted":
+                raw_frequencies = [sum(weight_counts) / c for c in
+                                   weight_counts]
+                normalized_frequencies = [r / sum(raw_frequencies) for r in raw_frequencies]
+                self.latent_replay_layer_frequencies = normalized_frequencies
+            else:
+                raise NotImplementedError()
+        else:
+            self.latent_replay_layer_frequencies = [1] + [0 for _ in range(fc_layers - 1)]
+
+    def relative_cost(self):
+        total = 0
+        for idx, w in enumerate(self.weight_counts):
+            total += sum(w*f for f in self.latent_replay_layer_frequencies[:idx+1])
+        return total
+
     def list_init_layers(self):
         '''Return list of modules whose parameters could be initialized differently (i.e., conv- or fc-layers).'''
         list = self.convE.list_init_layers()
@@ -94,17 +121,20 @@ class Classifier(ContinualLearner):
 
 
     def forward(self, x, return_internal=False, return_intermediate=False):
+        """
+        :param return_internal: Returns flattened features obtained`from convolutional layers
+        :param return_intermediate: Returns list of features for each layer
+        """
         hidden_rep = self.convE(x)
         hidden_rep = self.flatten(hidden_rep)
-        if return_internal and not return_intermediate:
+        if return_internal:
             return hidden_rep
+        elif return_intermediate:
+            last_features, intermediate_features, _ = self.fcE(hidden_rep, return_lists=True)
+            return [hidden_rep] + intermediate_features + [last_features]
         else:
-            if return_intermediate:
-                _, final_features, _ = self.fcE(hidden_rep, return_lists=return_intermediate)
-                return [hidden_rep] + final_features
-            else:
-                final_features = self.fcE(self.flatten(hidden_rep))
-                return self.classifier(final_features)
+            final_features = self.fcE(self.flatten(hidden_rep))
+            return self.classifier(final_features)
 
     def input_to_hidden(self, x):
         '''Get [hidden_rep]s (inputs to final fully-connected layers) for images [x].'''
@@ -119,21 +149,29 @@ class Classifier(ContinualLearner):
         #return self.classifier(self.fcE(self.flatten(images if from_hidden else self.convE(images))))
 
     def classify(self, x, not_hidden=False, intermediate=False):
-        '''For input [x] (image or extracted "intermediate" image features), return all predicted "scores"/"logits".'''
+        """
+        For input [x] (image or extracted "intermediate" image features), return all predicted "scores"/"logits"
+        :param not_hidden: If x doesnt contain hidden features from convolutional layers.
+        :param intermediate: If x is a list of features for each layer.
+        """
+
         if intermediate:
             outputs = []
             start = 0
             batch_size = x[0].shape[0]
             for skip_idx, features in enumerate(x[::-1]):
-                step = ceil(self.latent_replay_layer_frequency[skip_idx] * batch_size)
-                y = self.classifier(self.fcE(features[start:start+step,:], skip_first=skip_idx))
+                step = ceil(self.latent_replay_layer_frequencies[skip_idx] * batch_size)
+                if skip_idx == len(x) - 1:
+                    y = self.classifier(features[start:start+step,:])
+                else:
+                    y = self.classifier(self.fcE(features[start:start+step,:], skip_first=skip_idx))
                 outputs.append(y)
                 start += step
             out = torch.cat(outputs, dim=0)
             assert out.shape[0] == x[0].shape[0]
             return out
         else:
-            image_features = self.flatten(x) if (self.hidden and not not_hidden) else self.flatten(self.convE(x))
+            image_features = self.flatten(x) if ((self.hidden or self.latent) and not not_hidden) else self.flatten(self.convE(x))
             hE = self.fcE(image_features)
             return self.classifier(hE)
 
@@ -232,7 +270,7 @@ class Classifier(ContinualLearner):
                         x_temp_ = x_[replay_id] if type(x_) == list else x_
                         if self.mask_dict is not None:
                             self.apply_XdGmask(task=replay_id + 1)
-                        y_hat_all = self.classify(x_temp_, not_hidden=replay_not_hidden, intermediate=self.latent)
+                        y_hat_all = self.classify(x_temp_, not_hidden=replay_not_hidden, latent=self.latent)
 
                 # -if needed (e.g., "class" or "task" scenario), remove predictions for classes not in replayed task
                 y_hat = y_hat_all if (active_classes is None) else y_hat_all[:, active_classes[replay_id]]

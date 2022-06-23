@@ -27,12 +27,13 @@ class AutoEncoder(ContinualLearner):
                  # -prior
                  prior="standard", z_dim=20, per_class=False, n_modes=1,
                  # -decoder
-                 recon_loss='BCE', network_output="sigmoid", deconv_type="standard", hidden=False, latent=False,only_last_layer=False,
+                 recon_loss='BCE', network_output="sigmoid", deconv_type="standard", hidden=False, latent=False,
                  dg_gates=False, dg_type="task", dg_prop=0., tasks=5, scenario="task", device='cuda',
                  # -classifer
                  classifier=True, classify_opt="beforeZ",
                  # -training-specific settings (can be changed after setting up model)
                  lamda_pl=0., lamda_rcl=1., lamda_vl=1.,
+                 c_h_dim=None,
                  **kwargs):
 
         # Set configurations for setting up the model
@@ -51,7 +52,6 @@ class AutoEncoder(ContinualLearner):
         # -replay hidden representations? (-> replay only propagates through fc-layers)
         self.hidden = hidden
         self.latent = latent
-        self.only_last_layer=only_last_layer
         # -type of loss to be used for reconstruction
         self.recon_loss = recon_loss # options: BCE|MSE
         self.network_output = network_output
@@ -100,9 +100,9 @@ class AutoEncoder(ContinualLearner):
         if fc_layers<2:
             self.fc_layer_sizes = [self.conv_out_units]  #--> this results in self.fcE = modules.Identity()
         elif fc_layers==2:
-            self.fc_layer_sizes = [self.conv_out_units, h_dim]
+            self.fc_layer_sizes = [self.conv_out_units, c_h_dim, h_dim]
         else:
-            self.fc_layer_sizes = [self.conv_out_units]+[int(x) for x in np.linspace(fc_units, h_dim, num=fc_layers-1)]
+            self.fc_layer_sizes = [self.conv_out_units]+[int(x) for x in np.linspace(fc_units, c_h_dim, num=fc_layers-1)] + [h_dim]
         real_h_dim = h_dim if fc_layers>1 else self.conv_out_units
         #------------------------------------------------------------------------------------------#
         self.fcE = MLP(size_per_layer=self.fc_layer_sizes, drop=fc_drop, batch_norm=fc_bn, nl=fc_nl,
@@ -216,7 +216,7 @@ class AutoEncoder(ContinualLearner):
         '''Pass input through feed-forward connections, to get [z_mean], [z_logvar] and [hE].
         Input [x] is either an image or, if [self.hidden], extracted "intermediate" or "internal" image features.'''
         # Forward-pass through conv-layers
-        hidden_x = x if (self.hidden and not not_hidden) else self.convE(x)
+        hidden_x = x if ((self.hidden or self.latent) and not not_hidden) else self.convE(x)
         image_features = self.flatten(hidden_x)
         # Forward-pass through fc-layers
         hE = self.fcE(image_features)
@@ -825,9 +825,6 @@ class AutoEncoder(ContinualLearner):
             else:
                 x_in = x
 
-            if self.only_last_layer:
-                recon_batch = recon_batch[-1]
-                x_in = x[0]
             # Calculate all losses
             reconL, variatL, predL, _ = self.loss_function(
                 x=x_in, y=y, x_recon=recon_batch, y_hat=y_hat, scores=None, mu=mu, z=z, logvar=logvar,

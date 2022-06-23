@@ -296,7 +296,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
             if batch_index <= iters_main:
 
                 #Train the main model with this batch (if generator exists use generations from VAE)
-                if generator is not None and not args.hidden:
+                if generator is not None and not (args.hidden or args.latent):
                     x_cls, _, _, _, _ = generator.forward(x, full=True)
                 else:
                     x_cls = x

@@ -234,12 +234,9 @@ def add_bir_options(parser, only_MNIST=False, compare_code="none", **kwargs):
     # -hidden replay
     if (not only_MNIST) and compare_code in ("none"):
         BIR.add_argument('--hidden', action="store_true", help="replay at 'internal level' (after conv-layers)")
-        BIR.add_argument('--latent', action="store_true", help="if set, internal replay will be done with "
-                                                               "additional constraints on intermediate representations"
-                                                               "in generator")
-        BIR.add_argument('--only-last-layer', action="store_true", help="if set, internal replay will be done only with loss on the last layer")
-        BIR.add_argument("--latent-replay-layer-frequency", default="0.3,0.5,0.2", type=str,
-                         help="comma-separated latent replay update frequency for each layer")
+        BIR.add_argument('--latent', action="store_true", help="if set, will run latent replay (requires provided `latent-replay-strategy`)")
+        BIR.add_argument("--latent-replay-strategy", default=None, choices=["basic", "cumulative_update_weighted", "total_weights_weighted"],
+                         help="latent replay strategy")
     return parser
 
 
@@ -362,6 +359,10 @@ def set_defaults(args, only_MNIST=False, single_task=False, generative=True, com
         args.acc_log = args.iters
         args.loss_log = args.iters
         args.sample_log = args.iters
+
+    if checkattr(args, 'hidden') and checkattr(args, 'latent'):
+        raise ValueError("Please specify either `hidden` to run IR or `latent` to run PLR.")
+
     return args
 
 
