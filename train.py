@@ -5,6 +5,7 @@ import tqdm
 import copy
 import utils
 from models.cl.continual_learner import ContinualLearner
+from models.vae import AutoEncoder
 
 
 def train(model, train_loader, iters, loss_cbs=list(), eval_cbs=list(), save_every=None, m_dir="./store/models",
@@ -35,7 +36,10 @@ def train(model, train_loader, iters, loss_cbs=list(), eval_cbs=list(), save_eve
 
             # Perform training-step on this batch
             data, y = data.to(device), y.to(device)
-            loss_dict = model.train_a_batch(data, y=y, freeze_convE=freeze_convE)
+            if isinstance(model, AutoEncoder):
+                loss_dict = model.train_a_batch(data, y=data, freeze_convE=freeze_convE)
+            else:
+                loss_dict = model.train_a_batch(data, y=y, freeze_convE=freeze_convE)
 
             # Fire training-callbacks (for visualization of training-progress)
             for loss_cb in loss_cbs:
@@ -55,6 +59,10 @@ def train(model, train_loader, iters, loss_cbs=list(), eval_cbs=list(), save_eve
             # Save checkpoint?
             if (save_every is not None) and (iteration % save_every) == 0:
                 utils.save_checkpoint(model, model_dir=m_dir)
+
+            # Save checkpoint?
+            if (save_every is not None) and (iteration % save_every) == 0:
+                utils.save_checkpoint(model.convE, model_dir=m_dir)
 
 
 
@@ -220,6 +228,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                         allowed_classes = list(range(classes_per_task*task_id, classes_per_task*(task_id+1)))
                         batch_size_replay_to_use = int(np.ceil(batch_size_replay / (task-1)))
                         x_temp_ = previous_generator.sample(batch_size_replay_to_use, allowed_classes=allowed_classes,
+                                                            return_internal=args.hidden, return_intermediate=args.latent,
                                                             only_x=False)
                         x_.append(x_temp_[0])
                         task_used.append(x_temp_[2])
@@ -231,7 +240,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                     # -generate inputs representative of previous tasks
                     x_temp_ = previous_generator.sample(
                         batch_size_replay, allowed_classes=allowed_classes, allowed_domains=allowed_domains,
-                        only_x=False,
+                        return_internal=args.hidden, return_intermediate=args.latent, only_x=False,
                     )
                     x_ = x_temp_[0]
                     task_used = x_temp_[2]
@@ -243,7 +252,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                 if scenario in ("domain", "class") and previous_model.mask_dict is None:
                     # -if replay does not need to be evaluated for each task (ie, not Task-IL and no task-specific mask)
                     with torch.no_grad():
-                        all_scores_ = previous_model.classify(x_, not_hidden=False if Generative else True)
+                        all_scores_ = previous_model.classify(x_[-1], not_hidden=False if Generative else True, intermediate=False)
                     scores_ = all_scores_[:, :(classes_per_task*(task-1))] if (
                             scenario=="class"
                     ) else all_scores_ # -> when scenario=="class", zero probs will be added in [loss_fn_kd]-function
@@ -338,8 +347,14 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
 
             #---> Train GENERATOR
             if generator is not None and batch_index <= iters_gen:
-
-                loss_dict = generator.train_a_batch(x, y=y, x_=x_, y_=y_, scores_=scores_,
+                if utils.checkattr(args, "hidden") or utils.checkattr(args, "latent"):
+                    with torch.no_grad():
+                        x_enc = model(x, return_internal=args.hidden, return_intermediate=args.latent)
+                        # encoded X should have dimensionality fitting latent layer
+                        # assert x_enc.shape[-1] == getattr(generator.fcE, "fcLayer{}".format(args.fc_latent_layer+1)).linear.in_features
+                else:
+                    x_enc = x
+                loss_dict = generator.train_a_batch(x_enc, y=y, x_=x_, y_=y_, scores_=scores_,
                                                     tasks_=task_used, active_classes=active_classes, rnt=(
                                                         1. if task==1 else 1./task
                                                     ) if rnt is None else rnt, task=task,

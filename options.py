@@ -21,6 +21,7 @@ def define_args(filename, description):
 
 
 def add_general_options(parser, single_task=False, generative=False, compare_code="none", only_MNIST=True, **kwargs):
+    parser.add_argument('--res-dir', type=str, default='none', help="specify the folder where results will be stored")
     parser.add_argument('--no-save', action='store_false', dest='save', help="don't save trained models")
     if single_task and generative:
             parser.add_argument('--save-all', action='store_true', help="also store conv- and deconv-layers")
@@ -233,6 +234,12 @@ def add_bir_options(parser, only_MNIST=False, compare_code="none", **kwargs):
     # -hidden replay
     if (not only_MNIST) and compare_code in ("none"):
         BIR.add_argument('--hidden', action="store_true", help="replay at 'internal level' (after conv-layers)")
+        BIR.add_argument('--latent', action="store_true", help="if set, internal replay will be done with "
+                                                               "additional constraints on intermediate representations"
+                                                               "in generator")
+        BIR.add_argument('--only-last-layer', action="store_true", help="if set, internal replay will be done only with loss on the last layer")
+        BIR.add_argument("--latent-replay-layer-frequency", default="0.3,0.5,0.2", type=str,
+                         help="comma-separated latent replay update frequency for each layer")
     return parser
 
 

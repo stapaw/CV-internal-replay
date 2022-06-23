@@ -12,7 +12,7 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
         model = AutoEncoder(
             image_size=config['size'], image_channels=config['channels'], classes=config['classes'],
             # -conv-layers
-            conv_type=args.conv_type, depth=args.g_depth if generator  and hasattr(args, 'g_depth') else args.depth,
+            conv_type=args.conv_type, depth=args.depth,
             start_channels=args.channels, reducing_layers=args.rl, conv_bn=(args.conv_bn=="yes"), conv_nl=args.conv_nl,
             num_blocks=args.n_blocks, convE=convE, global_pooling=False if generator else checkattr(args, 'gp'),
             # -fc-layers
@@ -27,7 +27,10 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
             z_dim=args.g_z_dim if generator  and hasattr(args, 'g_z_dim') else args.z_dim,
             # -decoder
             hidden=checkattr(args, 'hidden'),
-            recon_loss=args.recon_loss, network_output="none" if checkattr(args, "normalize") else "sigmoid",
+            latent=checkattr(args, 'latent'),
+            only_last_layer=checkattr(args, 'only_last_layer'),
+            recon_loss= args.recon_loss if hasattr(args, "recon_loss") else "MSE",
+            network_output="none" if checkattr(args, "normalize") else "sigmoid",
             deconv_type=args.deconv_type if hasattr(args, "deconv_type") else "standard",
             dg_gates=utils.checkattr(args, 'dg_gates'), dg_type=args.dg_type if hasattr(args, 'dg_type') else "task",
             dg_prop=args.dg_prop if hasattr(args, 'dg_prop') else 0.,
@@ -68,6 +71,7 @@ def define_autoencoder(args, config, device, generator=False, convE=None):
             lamda_rcl=1. if not hasattr(args, 'rcl') else args.rcl,
             lamda_vl=1. if not hasattr(args, 'vl') else args.vl,
             lamda_pl=(0. if generator else 1.) if not hasattr(args, 'pl') else args.pl,
+            fc_latent_layer=args.fc_latent_layer
         ).to(device)
     # -return model
     return model
@@ -91,6 +95,8 @@ def define_classifier(args, config, device):
             fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl, excit_buffer=True,
             # -training-specific components
             hidden=checkattr(args, 'hidden'),
+            latent=checkattr(args, 'latent'),
+            latent_replay_layer_frequency= [1.0 if elem is 0 else 0 for elem in range(args.fc_lay-1)] if not hasattr(args, 'latent_replay_layer_frequency') else [float(v) for v in args.latent_replay_layer_frequency.split(",")]
         ).to(device)
     else:
         model = Classifier(
