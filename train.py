@@ -5,6 +5,7 @@ import tqdm
 import copy
 import utils
 from models.cl.continual_learner import ContinualLearner
+from torch import optim
 
 
 def train(model, train_loader, iters, loss_cbs=list(), eval_cbs=list(), save_every=None, m_dir="./store/models",
@@ -99,6 +100,29 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
 
     # Loop over all tasks.
     for task, train_dataset in enumerate(train_datasets, 1):
+
+        if task == 2:
+
+            args.freeze_convE = True
+            args.hidden = True
+            args.pre_convE = True
+
+            for param in model.convE.parameters():
+                param.requires_grad = False
+            if generator is not None:
+                for param in generator.convE.parameters():
+                    param.requires_grad = False
+
+            model.optim_list = [
+                {'params': filter(lambda p: p.requires_grad, model.parameters()), 'lr': args.lr},
+            ]
+            model.optimizer = optim.Adam(model.optim_list, betas=(0.9, 0.999))
+            if generator is not None:
+                generator.optim_list = [
+                    {'params': filter(lambda p: p.requires_grad, generator.parameters()),
+                     'lr': args.lr_gen if hasattr(args, 'lr_gen') else args.lr},
+                ]
+                generator.optimizer = optim.Adam(generator.optim_list, betas=(0.9, 0.999))
 
         # If offline replay-setting, create large database of all tasks so far
         if replay_mode=="offline" and (not scenario=="task"):

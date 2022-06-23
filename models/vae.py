@@ -422,9 +422,9 @@ class AutoEncoder(ContinualLearner):
 
         batch_size = x.size(0)
         if self.recon_loss=="MSE":
-            # reconL = F.mse_loss(input=x_recon.view(batch_size, -1), target=x.view(batch_size, -1), reduction='none')
-            # reconL = torch.mean(reconL, dim=1) if average else torch.sum(reconL, dim=1)
-            reconL = -lf.log_Normal_standard(x=x, mean=x_recon, average=average, dim=-1)
+            reconL = F.mse_loss(input=x_recon.view(batch_size, -1), target=x.view(batch_size, -1), reduction='none')
+            reconL = torch.mean(reconL, dim=1) if average else torch.sum(reconL, dim=1)
+            # reconL = -lf.log_Normal_standard(x=x, mean=x_recon, average=average, dim=-1)
         elif self.recon_loss=="BCE":
             reconL = F.binary_cross_entropy(input=x_recon.view(batch_size, -1), target=x.view(batch_size, -1),
                                             reduction='none')

@@ -61,6 +61,8 @@ def get_singletask_experiment(name, data_dir="./store/datasets", normalize=False
         data_type = 'mnist'
     elif name == "MNIST28":
         data_type = 'mnist28'
+    elif name == "fmnist":
+        data_type = 'fmnist'
     elif name == "CIFAR10":
         data_type = 'cifar10'
     elif name == "CIFAR100":
