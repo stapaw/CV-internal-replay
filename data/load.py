@@ -181,6 +181,35 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./store/datasets",
                 if not only_test:
                     train_datasets.append(SubDataset(fmnist_train, labels, target_transform=target_transform))
                 test_datasets.append(SubDataset(fmnist_test, labels, target_transform=target_transform))
+    elif name == 'CIFAR10':
+        # check for number of tasks
+        if tasks > 10:
+            raise ValueError("Experiment 'CIFAR10' cannot have more than 10 tasks!")
+        # configurations
+        config = DATASET_CONFIGS['cifar10']
+        classes_per_task = int(np.floor(10 / tasks))
+        if not only_config:
+            # prepare permutation to shuffle label-ids (to create different class batches for each random seed)
+            permutation = np.random.permutation(list(range(10)))
+            target_transform = transforms.Lambda(lambda y, x=permutation: int(permutation[y]))
+            # prepare train and test datasets with all classes
+            if not only_test:
+                cifar10_train = get_dataset('cifar10', type="train", dir=data_dir, normalize=normalize,
+                                             augment=augment, target_transform=target_transform, verbose=verbose)
+            cifar10_test = get_dataset('cifar10', type="test", dir=data_dir, normalize=normalize,
+                                        target_transform=target_transform, verbose=verbose)
+            # generate labels-per-task
+            labels_per_task = [
+                list(np.array(range(classes_per_task)) + classes_per_task * task_id) for task_id in range(tasks)
+            ]
+            # split them up into sub-tasks
+            train_datasets = []
+            test_datasets = []
+            for labels in labels_per_task:
+                target_transform = transforms.Lambda(lambda y, x=labels[0]: y - x) if scenario == 'domain' else None
+                if not only_test:
+                    train_datasets.append(SubDataset(cifar10_train, labels, target_transform=target_transform))
+                test_datasets.append(SubDataset(cifar10_test, labels, target_transform=target_transform))
     elif name == 'CIFAR100':
         # check for number of tasks
         if tasks>100:
@@ -247,9 +276,14 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./store/datasets",
 
     # If needed, update number of (total) classes in the config-dictionary
     config['classes'] = classes_per_task if scenario=='domain' else classes_per_task*tasks
-    config['normalize'] = normalize if name=='CIFAR100' else False
+    config['normalize'] = normalize if name in ['CIFAR100', 'CIFAR10'] else False
     if config['normalize']:
-        config['denormalize'] = AVAILABLE_TRANSFORMS["cifar100_denorm"]
+        if name == 'CIFAR100':
+            config['denormalize'] = AVAILABLE_TRANSFORMS["cifar100_denorm"]
+
+    if config['normalize']:
+        if name == 'CIFAR10':
+            config['denormalize'] = AVAILABLE_TRANSFORMS["cifar10_denorm"]
 
     # Return tuple of train-, validation- and test-dataset, config-dictionary and number of classes per task
     return config if only_config else ((train_datasets, test_datasets), config, classes_per_task)

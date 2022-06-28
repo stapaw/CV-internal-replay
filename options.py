@@ -81,7 +81,7 @@ def add_task_options(parser, only_MNIST=False, single_task=False, compare_code="
         task_default = 'CIFAR10'
     else:
         MNIST_tasks = ['splitMNIST', 'permMNIST','fmnist']
-        image_tasks = ['CIFAR100',  'fruits360']
+        image_tasks = ['CIFAR100',  'fruits360', 'CIFAR10']
         task_choices = MNIST_tasks if only_MNIST else MNIST_tasks+image_tasks
         task_default = 'splitMNIST' if only_MNIST else 'CIFAR100'
     task_params.add_argument('--experiment', type=str, default=task_default, choices=task_choices)
@@ -317,7 +317,7 @@ def set_defaults(args, only_MNIST=False, single_task=False, generative=True, com
             args.gamma = 1. if args.gamma is None else args.gamma
             if hasattr(args, 'dg_prop'):
                 args.dg_prop = 0.8 if args.dg_prop is None else args.dg_prop
-        elif args.experiment in ['CIFAR100', 'fruits360']:
+        elif args.experiment in ['CIFAR100', 'CIFAR10', 'fruits360']:
             args.xdg_prop = 0.7 if args.scenario=="task" and args.xdg_prop is None else args.xdg_prop
             args.si_c = (100. if args.scenario=='task' else 1.) if args.si_c is None else args.si_c
             args.ewc_lambda = (1000. if args.scenario=='task' else 1.) if args.ewc_lambda is None else args.ewc_lambda
