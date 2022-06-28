@@ -182,7 +182,7 @@ def add_VAE_options(parser, only_MNIST=False,  **kwargs):
 def add_replay_options(parser, only_MNIST=False, compare_code="none", **kwargs):
     replay = parser.add_argument_group('Replay Parameters')
     if compare_code in ("none"):
-        replay_choices = ['offline', 'generative', 'none', 'current']
+        replay_choices = ['offline', 'generative', 'none', 'current', 'latent_buffer']
         replay.add_argument('--replay', type=str, default='none', choices=replay_choices)
     if compare_code not in ("all", "hyper", "bir"):
         replay.add_argument('--distill', action='store_true', help="use distillation for replay")

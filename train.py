@@ -95,7 +95,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
     batch_size_replay = batch_size if batch_size_replay is None else batch_size_replay
 
     # Initiate indicators for replay (no replay for 1st task)
-    Generative = Current = Offline_TaskIL = False
+    Generative = Current = Offline_TaskIL = LatentBuffer = False
     previous_model = None
 
     # Register starting param-values (needed for "intelligent synapses").
@@ -105,6 +105,8 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                 n = n.replace('.', '__')
                 model.register_buffer('{}_SI_prev_task'.format(n), p.detach().clone())
 
+    if replay_mode=="latent_buffer":
+        latent_repr_buffer = []
     # Loop over all tasks.
     for task, train_dataset in enumerate(train_datasets, 1):
 
@@ -200,7 +202,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
 
 
             #####-----REPLAYED BATCH-----#####
-            if not Offline_TaskIL and not Generative and not Current:
+            if not Offline_TaskIL and not Generative and not Current and not LatentBuffer:
                 x_ = y_ = scores_ = task_used = None   #-> if no replay
 
             #--------------------------------------------INPUTS----------------------------------------------------#
@@ -210,6 +212,13 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                 x_ = x[:batch_size_replay]  #--> use current task inputs
                 task_used = None
 
+            if LatentBuffer:
+                if utils.checkattr(args, "hidden") or utils.checkattr(args, "latent"):
+                    x_, y_ = next(iter(latent_buffer_loader))
+                    x_, y_ = x_.to(device), y_.to(device)
+                    with torch.no_grad():
+                        x_ = previous_model(x_, return_internal=args.hidden, return_intermediate=True)
+                task_used = None
 
             ##-->> Generative Replay <<--##
             if Generative:
@@ -284,6 +293,23 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
                         # - also get hard target
                         _, temp_y_ = torch.max(temp_scores_, dim=1)
                         y_.append(temp_y_)
+            if LatentBuffer:
+                # Get target scores & possibly labels (i.e., [scores_] / [y_]) -- use previous model, with no_grad()
+                if scenario in ("domain", "class") and previous_model.mask_dict is None:
+                    # -if replay does not need to be evaluated for each task (ie, not Task-IL and no task-specific mask)
+                    with torch.no_grad():
+                        if not args.only_last_layer:
+                            all_scores_ = previous_model.classify(x_[::-1][-1], not_hidden=False, intermediate=False)
+                        else:
+                            all_scores_ = previous_model.classify(x_, not_hidden=False, intermediate=False)
+
+                    scores_ = all_scores_[:, :(classes_per_task * (task - 1))] if (
+                            scenario == "class"
+                    ) else all_scores_  # -> when scenario=="class", zero probs will be added in [loss_fn_kd]-function
+                    # -also get the 'hard target'
+                    _, y_ = torch.max(scores_, dim=1)
+                else:
+                    pass # not implemented
             # -only keep predicted y_/scores_ if required (as otherwise unnecessary computations will be done)
             y_ = y_ if (model.replay_targets=="hard") else None
             scores_ = scores_ if (model.replay_targets=="soft") else None
@@ -295,6 +321,8 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
             #---> Train MAIN MODEL
             if batch_index <= iters_main:
 
+                if x_ is not None and LatentBuffer and not args.only_last_layer:
+                    x_ = x_[::-1]
                 #Train the main model with this batch (if generator exists use generations from VAE)
                 if generator is not None and not args.hidden:
                     x_cls, _, _, _, _ = generator.forward(x, full=True)
@@ -403,3 +431,18 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="task", rnt=Non
             previous_generator = previous_model if feedback else copy.deepcopy(generator).eval()
         elif replay_mode=='current':
             Current = True
+        elif replay_mode=='latent_buffer':
+            LatentBuffer = True
+
+            concat_dataset = ConcatDataset(train_datasets[:task])
+            concat_subset = torch.utils.data.Subset(
+                concat_dataset, list(torch.utils.data.RandomSampler(
+                    concat_dataset, replacement=True, num_samples = 512)
+                )
+            )
+            latent_buffer_loader = torch.utils.data.DataLoader(
+                concat_dataset, batch_sampler=torch.utils.data.BatchSampler(
+                    torch.utils.data.RandomSampler(concat_subset), batch_size_replay, drop_last=True
+                )
+            )
+
