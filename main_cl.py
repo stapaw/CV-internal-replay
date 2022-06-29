@@ -733,13 +733,13 @@ def run(args, verbose=False):
         "test": {
             "accs": accs,
             "average_acc": average_accs,
-            "reconstruction_error_mean": np.mean(re_per_datapoint).item(),
-            "reconstruction_error_std": np.sqrt(np.var(re_per_datapoint)).item(),
+            # "reconstruction_error_mean": np.mean(re_per_datapoint).item(),
+            # "reconstruction_error_std": np.sqrt(np.var(re_per_datapoint)).item(),
         },
-        "precision":precision.tolist(),
-        "recall": recall.tolist(),
-        # "IS": float(IS),
-        "FID": float(FID),
+        # "precision":precision.tolist(),
+        # "recall": recall.tolist(),
+        # # "IS": float(IS),
+        # "FID": float(FID),
         "args": args.__dict__,
     }
 
